@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v4-telugu-script-voiceover",
-  "version": "4.0.0",
-  "description": "Render web service for Linux 90 Days Challenge with Telugu script voiceover output",
+  "name": "linux-render-v5-telugu-nlp-voiceover",
+  "version": "5.0.0",
+  "description": "Fixed 13-section Linux challenge generator with Telugu NLP voiceover",
   "main": "server.js",
   "type": "module",
   "scripts": {

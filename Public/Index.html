@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linux 90 Days Video Script Generator</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <p class="badge">90 Days Linux Challenge</p>
+      <h1>AI Video Script Generator</h1>
+      <p class="sub">
+        Make no-face Instagram Reel scripts with command, requirement, error fix,
+        caption, hashtags, and practice task.
+      </p>
+    </section>
+
+    <section class="card">
+      <label>Day number</label>
+      <input id="day" placeholder="Example: 1" value="1" />
+
+      <label>Linux command or topic</label>
+      <input id="command" placeholder="Example: pwd, ls, git, curl" value="pwd" />
+
+      <label>Platform</label>
+      <select id="platform">
+        <option>Instagram Reels</option>
+        <option>YouTube Shorts</option>
+        <option>Facebook Reels</option>
+      </select>
+
+      <label>Language style</label>
+      <select id="language">
+        <option>Simple English</option>
+        <option>English + Telugu friendly explanation</option>
+        <option>Motivational English</option>
+      </select>
+
+      <label>Video length</label>
+      <select id="videoLength">
+        <option>30 seconds</option>
+        <option>35 seconds</option>
+        <option>45 seconds</option>
+        <option>60 seconds</option>
+      </select>
+
+      <label>Audience</label>
+      <input id="audience" value="Absolute beginners using Termux on Android" />
+
+      <button id="generateBtn">Generate Video Plan</button>
+    </section>
+
+    <section class="output-card">
+      <div class="output-head">
+        <h2>Generated Script</h2>
+        <button id="copyBtn">Copy</button>
+      </div>
+      <pre id="output">Your result will appear here.</pre>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

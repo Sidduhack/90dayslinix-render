@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-fixed-all-in-one",
-  "version": "1.0.0",
-  "description": "All-in-one Render web service for Linux 90 Days AI video script generator",
+  "name": "linux-render-v2-scenarios-app",
+  "version": "2.0.0",
+  "description": "Render web service for Linux 90 Days Challenge with scenarios use/not-use guidance",
   "main": "server.js",
   "type": "module",
   "scripts": {

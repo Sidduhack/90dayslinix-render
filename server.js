@@ -22,7 +22,7 @@ const html = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Linux 90 Days Challenge - Scenario Script Generator</title>
+  <title>Linux 90 Days - Roman Telugu Voiceover Generator</title>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -68,12 +68,12 @@ const html = `<!DOCTYPE html>
     }
     h1 {
       margin: 14px 0 8px;
-      font-size: clamp(30px, 7vw, 58px);
+      font-size: clamp(30px, 7vw, 56px);
       letter-spacing: -1px;
     }
     .sub {
       color: var(--muted);
-      max-width: 780px;
+      max-width: 790px;
       margin: auto;
       line-height: 1.6;
       font-size: 16px;
@@ -164,7 +164,7 @@ const html = `<!DOCTYPE html>
       color: #dceaff;
       border: 1px solid #33425a;
     }
-    .danger-note {
+    .note {
       border-left: 4px solid var(--warn);
       background: rgba(255,207,90,.08);
       padding: 12px;
@@ -223,38 +223,38 @@ const html = `<!DOCTYPE html>
       margin-top: 10px;
       line-height: 1.45;
     }
-    .ok { color: var(--ok); }
-    .warn { color: var(--warn); }
-    .danger { color: var(--danger); }
+    code {
+      color: #9ed0ff;
+    }
   </style>
 </head>
 <body>
   <main class="app">
     <section class="hero">
-      <p class="badge">Linux 90 Days Challenge • v2 Scenario Edition</p>
-      <h1>Command + Scenario + Reel Script Generator</h1>
+      <p class="badge">Linux 90 Days Challenge • Roman Telugu Voiceover</p>
+      <h1>Scenario + Voiceover Generator</h1>
       <p class="sub">
-        Create beginner-friendly Linux videos with requirements, when to use, when not to use,
-        common errors, safe fixes, practice tasks, captions, and hashtags.
+        Generate Linux command guides with requirements, use/not-use scenarios, error fixes,
+        and a ready-to-paste <b>Roman Telugu voiceover script</b> for ElevenLabs, CapCut, or any TTS tool.
       </p>
     </section>
 
     <div class="mini-grid">
       <div class="mini-card">
-        <b>Use scenario</b>
-        <span>Shows where this command is useful in real Linux work.</span>
+        <b>Roman Telugu voiceover</b>
+        <span>Telugu speaking style written in English letters, like “Ee roju manam pwd command nerchukundam.”</span>
       </div>
       <div class="mini-card">
-        <b>Not-use scenario</b>
-        <span>Warns beginners where the command is risky or wrong.</span>
+        <b>Commands stay English</b>
+        <span>Linux commands like <code>pwd</code>, <code>ls</code>, <code>git</code> remain exact.</span>
       </div>
       <div class="mini-card">
-        <b>Requirements</b>
-        <span>Adds package checks and install commands for Termux/Ubuntu.</span>
+        <b>Scenario guide</b>
+        <span>When to use, when not to use, requirements, safe examples.</span>
       </div>
       <div class="mini-card">
-        <b>Video-ready output</b>
-        <span>Gives hook, voiceover, timeline, caption, and hashtags.</span>
+        <b>Video-ready</b>
+        <span>Hook, voiceover, timeline, caption, and hashtags.</span>
       </div>
     </div>
 
@@ -275,20 +275,19 @@ const html = `<!DOCTYPE html>
           <option>Both Termux and Ubuntu/Debian</option>
         </select>
 
-        <label>Output type</label>
-        <select id="outputType">
-          <option>Full Reel + Scenario Guide</option>
-          <option>Only Deep Command Guide</option>
-          <option>Only Instagram Reel Script</option>
-          <option>Only Errors and Fixes</option>
+        <label>Voiceover language</label>
+        <select id="voiceLanguage">
+          <option>Roman Telugu only</option>
+          <option>Roman Telugu + simple English tech words</option>
+          <option>Simple English only</option>
         </select>
 
-        <label>Language style</label>
-        <select id="language">
-          <option>Simple English</option>
-          <option>English + Telugu friendly explanation</option>
-          <option>Motivational English</option>
-          <option>Roman Telugu + English command words</option>
+        <label>Output type</label>
+        <select id="outputType">
+          <option>Full Guide + Roman Telugu Voiceover</option>
+          <option>Only Roman Telugu Voiceover</option>
+          <option>Only Scenario Guide</option>
+          <option>Only Errors and Fixes</option>
         </select>
 
         <label>Video length</label>
@@ -299,14 +298,22 @@ const html = `<!DOCTYPE html>
           <option>60 seconds</option>
         </select>
 
+        <label>Voice style</label>
+        <select id="voiceStyle">
+          <option>Friendly teacher</option>
+          <option>Motivational tech creator</option>
+          <option>Calm tutorial style</option>
+          <option>Fast Instagram Reel style</option>
+        </select>
+
         <label>Extra instruction</label>
-        <textarea id="extra" placeholder="Example: Make it for absolute beginners. Add common Termux error."></textarea>
+        <textarea id="extra" placeholder="Example: Make it easy for beginners. Add common Termux error."></textarea>
 
-        <button class="primary" id="generateBtn">Generate Scenario + Video Plan</button>
+        <button class="primary" id="generateBtn">Generate Roman Telugu Voiceover</button>
 
-        <div class="danger-note">
-          <b>Safety rule:</b> for risky commands like <code>rm</code>, <code>chmod</code>, <code>chown</code>, and <code>sudo</code>,
-          the output should include warnings and safe practice examples.
+        <div class="note">
+          <b>Important:</b> Voiceover will be in Roman Telugu, but commands will stay exact.
+          Example: <code>pwd</code> will not be translated.
         </div>
 
         <p class="status">
@@ -319,7 +326,7 @@ const html = `<!DOCTYPE html>
           <h2>Generated Output</h2>
           <button class="secondary" id="copyBtn">Copy</button>
         </div>
-        <pre id="output">Your Linux scenario guide and video script will appear here.</pre>
+        <pre id="output">Your Roman Telugu voiceover and Linux scenario guide will appear here.</pre>
       </section>
     </section>
   </main>
@@ -344,13 +351,14 @@ const html = `<!DOCTYPE html>
         day: $("day").value.trim(),
         command: $("command").value.trim(),
         environment: $("environment").value,
+        voiceLanguage: $("voiceLanguage").value,
         outputType: $("outputType").value,
-        language: $("language").value,
         videoLength: $("videoLength").value,
+        voiceStyle: $("voiceStyle").value,
         extra: $("extra").value.trim()
       };
 
-      $("output").textContent = "Generating... Please wait.";
+      $("output").textContent = "Generating Roman Telugu voiceover... Please wait.";
 
       try {
         const response = await fetch("/api/generate", {
@@ -388,14 +396,14 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
-    app: "Linux 90 Days Scenario Script Generator",
-    version: "2.0.0"
+    app: "Linux 90 Days Roman Telugu Voiceover Generator",
+    version: "3.0.0"
   });
 });
 
 app.post("/api/generate", async (req, res) => {
   try {
-    const { day, command, environment, outputType, language, videoLength, extra } = req.body;
+    const { day, command, environment, voiceLanguage, outputType, videoLength, voiceStyle, extra } = req.body;
 
     if (!process.env.NVIDIA_API_KEY) {
       return res.status(500).json({
@@ -415,26 +423,36 @@ app.post("/api/generate", async (req, res) => {
     const prompt = `
 You are a Linux teacher, safety-aware beginner mentor, and short-form content script writer.
 
-Create content for a "90 Days Linux Basics Challenge" based on the updated PDF style:
-COMMAND + REQUIREMENTS + WHEN TO USE + WHEN NOT TO USE + COMMON ERRORS/FIXES + REEL SCRIPT.
+Create content for a "90 Days Linux Basics Challenge".
+
+VERY IMPORTANT LANGUAGE RULE:
+- The VOICEOVER SCRIPT must be in Roman Telugu.
+- Roman Telugu means Telugu words written using English letters.
+- Do NOT use Telugu script.
+- Linux commands, package names, flags, file paths, and error messages must remain in English exactly.
+- Example voice style:
+  "Day ${day} of 90 Days Linux Challenge. Ee roju manam ${command} command gurinchi nerchukundam. Idi beginner ki chala important command."
+- Use natural spoken Telugu, simple and clear.
+- Use common tech words in English when natural: command, terminal, folder, file, install, error, fix, output.
 
 Inputs:
 Day: ${day}
 Linux command/topic: ${command}
-Environment: ${environment || "Both Termux and Ubuntu/Debian"}
-Output type: ${outputType || "Full Reel + Scenario Guide"}
-Language style: ${language || "Simple English"}
+Environment: ${environment || "Termux on Android"}
+Voiceover language: ${voiceLanguage || "Roman Telugu only"}
+Output type: ${outputType || "Full Guide + Roman Telugu Voiceover"}
 Video length: ${videoLength || "35 seconds"}
+Voice style: ${voiceStyle || "Friendly teacher"}
 Extra instruction: ${extra || "No extra instruction"}
 
 Output structure:
 
 1. TITLE
-- Give a short beginner-friendly title.
+- Short title in English.
 
 2. COMMAND MEANING
-- Explain what the command/topic does in simple language.
-- Mention whether it is built-in or needs a package if relevant.
+- Explain in simple English.
+- Mention whether package installation is needed.
 
 3. REQUIREMENTS BEFORE RUNNING
 - Show requirement check commands.
@@ -443,55 +461,49 @@ Output structure:
 - If no installation is needed, say "No extra package required."
 
 4. WHEN TO USE THIS COMMAND
-- Give 3 to 5 real scenarios.
-- Make scenarios practical for beginners, Termux users, students, creators, and small projects.
+- Give 3 to 5 real beginner scenarios.
 
 5. WHEN NOT TO USE THIS COMMAND
 - Give 3 to 5 warnings.
-- Include beginner mistakes.
-- For risky commands, clearly explain safe alternatives.
-- Do not recommend destructive commands without safe test examples.
+- Include beginner mistakes and safety.
 
 6. SAFE COMMAND EXAMPLES
-- Give safe examples only.
-- For risky commands such as rm, chmod, chown, sudo, kill, mv, cp overwrite, include safe test-folder examples.
+- Give safe commands only.
+- For risky commands like rm, chmod, chown, sudo, kill, mv overwrite, use a demo folder only.
 
 7. COMMON ERRORS AND FIXES
 - Include error message.
 - Reason.
 - Fix command.
-- Termux fix if relevant.
-- Ubuntu/Debian fix if relevant.
 
-8. PRACTICE TASK
-- Give a small task the viewer can try safely.
+8. ROMAN TELUGU VOICEOVER SCRIPT
+- This section must be Roman Telugu only, except Linux commands.
+- Make it natural for ${videoLength || "35 seconds"}.
+- Add pause marks like [pause], [short pause].
+- Use motivational ending.
+- Do not use Telugu script.
+- Do not make it too formal.
+- Make it sound like a normal tech creator speaking.
 
-9. INSTAGRAM REEL SCRIPT
-- Give a natural voiceover with pauses.
-- Make it ${videoLength || "35 seconds"}.
-- Include motivation.
-- No face required.
+9. SCREEN RECORDING TIMELINE
+- Give second-by-second timeline in English.
+- Include terminal actions and caption text.
 
-10. SCREEN RECORDING TIMELINE
-- Give second-by-second visual plan.
-- Include what to show on terminal.
-- Include where to show captions.
+10. INSTAGRAM CAPTION
+- Caption can be Roman Telugu + English hashtags.
+- Keep it short.
 
-11. CAPTION
-- Short Instagram caption.
-
-12. HASHTAGS
+11. HASHTAGS
 - Give 10 to 18 relevant hashtags.
 
-13. SAFETY NOTE
-- One clear warning for beginners.
+12. SAFETY NOTE
+- One clear beginner safety note in simple English.
 
 Rules:
-- Keep everything beginner-friendly.
-- Never tell the viewer to run random destructive commands.
-- If command is dangerous, use a demo folder only.
-- Make it suitable for learning and Instagram video creation.
-- Use clear code blocks for commands.
+- Beginner-friendly.
+- No dangerous commands without safe demo folder.
+- Keep commands exact.
+- Roman Telugu voiceover must be easy to paste into ElevenLabs/CapCut TTS.
 `;
 
     const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
@@ -506,14 +518,14 @@ Rules:
         messages: [
           {
             role: "system",
-            content: "You create safe, beginner-friendly Linux learning content and no-face video scripts."
+            content: "You create safe beginner Linux learning guides and Roman Telugu no-face video voiceover scripts."
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        max_tokens: 1800,
+        max_tokens: 1900,
         temperature: 0.55
       })
     });
@@ -538,6 +550,5 @@ Rules:
 });
 
 app.listen(PORT, () => {
-  console.log(`Scenario app running on port ${PORT}`);
+  console.log(`Roman Telugu voiceover app running on port ${PORT}`);
 });
-          

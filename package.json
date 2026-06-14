@@ -1,7 +1,7 @@
 {
-  "name": "linux-video-render-app",
+  "name": "linux-render-fixed-all-in-one",
   "version": "1.0.0",
-  "description": "AI Linux 90 Days Challenge video script generator for Render.com",
+  "description": "All-in-one Render web service for Linux 90 Days AI video script generator",
   "main": "server.js",
   "type": "module",
   "scripts": {

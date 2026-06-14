@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v5-telugu-nlp-voiceover",
-  "version": "5.0.0",
-  "description": "Fixed 13-section Linux challenge generator with Telugu NLP voiceover",
+  "name": "linux-render-v7-number-words-telugu-voiceover",
+  "version": "7.0.0",
+  "description": "Linux 90 Days generator with all-in-one Telugu voiceover and number words",
   "main": "server.js",
   "type": "module",
   "scripts": {

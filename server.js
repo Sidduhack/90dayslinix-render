@@ -18,11 +18,11 @@ const commands = [
 ];
 
 const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="te">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Linux 90 Days - Roman Telugu Voiceover Generator</title>
+  <title>Linux 90 Days - Telugu Voiceover Generator</title>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -40,7 +40,7 @@ const html = `<!DOCTYPE html>
     }
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
+      font-family: Arial, "Noto Sans Telugu", sans-serif;
       background:
         radial-gradient(circle at top left, rgba(64,166,255,.18), transparent 32%),
         radial-gradient(circle at top right, rgba(124,92,255,.14), transparent 30%),
@@ -135,6 +135,7 @@ const html = `<!DOCTYPE html>
       color: #ffffff;
       font-size: 15px;
       outline: none;
+      font-family: Arial, "Noto Sans Telugu", sans-serif;
     }
     textarea {
       min-height: 78px;
@@ -188,7 +189,7 @@ const html = `<!DOCTYPE html>
     pre {
       white-space: pre-wrap;
       word-wrap: break-word;
-      line-height: 1.55;
+      line-height: 1.75;
       color: #e9f1ff;
       background: #050912;
       padding: 16px;
@@ -196,7 +197,8 @@ const html = `<!DOCTYPE html>
       border: 1px solid #202d40;
       min-height: 420px;
       overflow-x: auto;
-      font-size: 14px;
+      font-size: 15px;
+      font-family: Arial, "Noto Sans Telugu", sans-serif;
     }
     .pill-row {
       display: flex;
@@ -231,30 +233,31 @@ const html = `<!DOCTYPE html>
 <body>
   <main class="app">
     <section class="hero">
-      <p class="badge">Linux 90 Days Challenge • Roman Telugu Voiceover</p>
-      <h1>Scenario + Voiceover Generator</h1>
+      <p class="badge">Linux 90 Days Challenge • Telugu Script Voiceover</p>
+      <h1>తెలుగు వాయిస్‌ఓవర్ జనరేటర్</h1>
       <p class="sub">
-        Generate Linux command guides with requirements, use/not-use scenarios, error fixes,
-        and a ready-to-paste <b>Roman Telugu voiceover script</b> for ElevenLabs, CapCut, or any TTS tool.
+        Linux commands కోసం requirements, use/not-use scenarios, errors & fixes,
+        ఇంకా <b>తెలుగు లిపిలో voiceover script</b> generate చేయండి.
+        Commands మాత్రం exact English/code format లోనే ఉంటాయి.
       </p>
     </section>
 
     <div class="mini-grid">
       <div class="mini-card">
-        <b>Roman Telugu voiceover</b>
-        <span>Telugu speaking style written in English letters, like “Ee roju manam pwd command nerchukundam.”</span>
+        <b>తెలుగు లిపి Voiceover</b>
+        <span>Roman Telugu కాదు. Output ఇలా వస్తుంది: “ఈ రోజు మనం pwd command నేర్చుకుందాం.”</span>
       </div>
       <div class="mini-card">
-        <b>Commands stay English</b>
-        <span>Linux commands like <code>pwd</code>, <code>ls</code>, <code>git</code> remain exact.</span>
+        <b>Commands English లోనే</b>
+        <span><code>pwd</code>, <code>ls</code>, <code>git</code> లాంటి commands translate కావు.</span>
       </div>
       <div class="mini-card">
         <b>Scenario guide</b>
-        <span>When to use, when not to use, requirements, safe examples.</span>
+        <span>ఎప్పుడు use చేయాలి, ఎప్పుడు use చేయకూడదు, safe examples.</span>
       </div>
       <div class="mini-card">
         <b>Video-ready</b>
-        <span>Hook, voiceover, timeline, caption, and hashtags.</span>
+        <span>Hook, voiceover, timeline, caption, hashtags.</span>
       </div>
     </div>
 
@@ -277,15 +280,15 @@ const html = `<!DOCTYPE html>
 
         <label>Voiceover language</label>
         <select id="voiceLanguage">
-          <option>Roman Telugu only</option>
-          <option>Roman Telugu + simple English tech words</option>
+          <option>Telugu script only</option>
+          <option>Telugu script + English tech words</option>
           <option>Simple English only</option>
         </select>
 
         <label>Output type</label>
         <select id="outputType">
-          <option>Full Guide + Roman Telugu Voiceover</option>
-          <option>Only Roman Telugu Voiceover</option>
+          <option>Full Guide + Telugu Voiceover</option>
+          <option>Only Telugu Voiceover</option>
           <option>Only Scenario Guide</option>
           <option>Only Errors and Fixes</option>
         </select>
@@ -309,11 +312,11 @@ const html = `<!DOCTYPE html>
         <label>Extra instruction</label>
         <textarea id="extra" placeholder="Example: Make it easy for beginners. Add common Termux error."></textarea>
 
-        <button class="primary" id="generateBtn">Generate Roman Telugu Voiceover</button>
+        <button class="primary" id="generateBtn">Generate Telugu Voiceover</button>
 
         <div class="note">
-          <b>Important:</b> Voiceover will be in Roman Telugu, but commands will stay exact.
-          Example: <code>pwd</code> will not be translated.
+          <b>Important:</b> Voiceover Telugu script లో వస్తుంది. Commands exact గా ఉంటాయి.
+          Example: <code>pwd</code> → <code>pwd</code> గానే ఉంటుంది.
         </div>
 
         <p class="status">
@@ -326,7 +329,7 @@ const html = `<!DOCTYPE html>
           <h2>Generated Output</h2>
           <button class="secondary" id="copyBtn">Copy</button>
         </div>
-        <pre id="output">Your Roman Telugu voiceover and Linux scenario guide will appear here.</pre>
+        <pre id="output">మీ Telugu voiceover మరియు Linux scenario guide ఇక్కడ కనిపిస్తుంది.</pre>
       </section>
     </section>
   </main>
@@ -358,7 +361,7 @@ const html = `<!DOCTYPE html>
         extra: $("extra").value.trim()
       };
 
-      $("output").textContent = "Generating Roman Telugu voiceover... Please wait.";
+      $("output").textContent = "Generating Telugu voiceover... Please wait.";
 
       try {
         const response = await fetch("/api/generate", {
@@ -396,8 +399,8 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
-    app: "Linux 90 Days Roman Telugu Voiceover Generator",
-    version: "3.0.0"
+    app: "Linux 90 Days Telugu Script Voiceover Generator",
+    version: "4.0.0"
   });
 });
 
@@ -425,22 +428,25 @@ You are a Linux teacher, safety-aware beginner mentor, and short-form content sc
 
 Create content for a "90 Days Linux Basics Challenge".
 
-VERY IMPORTANT LANGUAGE RULE:
-- The VOICEOVER SCRIPT must be in Roman Telugu.
-- Roman Telugu means Telugu words written using English letters.
-- Do NOT use Telugu script.
-- Linux commands, package names, flags, file paths, and error messages must remain in English exactly.
-- Example voice style:
-  "Day ${day} of 90 Days Linux Challenge. Ee roju manam ${command} command gurinchi nerchukundam. Idi beginner ki chala important command."
+CRITICAL LANGUAGE RULE:
+- The VOICEOVER SCRIPT must be written in Telugu script only.
+- Do NOT write the voiceover in Roman Telugu.
+- Telugu script means Unicode Telugu letters like: ఈ రోజు మనం Linux command నేర్చుకుందాం.
+- Linux commands, package names, flags, file paths, URLs, and error messages must remain in English exactly.
+- Good example:
+  "Day ${day} of 90 Days Linux Challenge. ఈ రోజు మనం ${command} command గురించి నేర్చుకుందాం. ఇది beginners కి చాలా important command."
+- Bad example:
+  "Ee roju manam ${command} command gurinchi nerchukundam."
 - Use natural spoken Telugu, simple and clear.
-- Use common tech words in English when natural: command, terminal, folder, file, install, error, fix, output.
+- English tech words are allowed when natural: command, terminal, folder, file, install, error, fix, output, package.
+- Do not translate command names.
 
 Inputs:
 Day: ${day}
 Linux command/topic: ${command}
 Environment: ${environment || "Termux on Android"}
-Voiceover language: ${voiceLanguage || "Roman Telugu only"}
-Output type: ${outputType || "Full Guide + Roman Telugu Voiceover"}
+Voiceover language: ${voiceLanguage || "Telugu script only"}
+Output type: ${outputType || "Full Guide + Telugu Voiceover"}
 Video length: ${videoLength || "35 seconds"}
 Voice style: ${voiceStyle || "Friendly teacher"}
 Extra instruction: ${extra || "No extra instruction"}
@@ -476,12 +482,12 @@ Output structure:
 - Reason.
 - Fix command.
 
-8. ROMAN TELUGU VOICEOVER SCRIPT
-- This section must be Roman Telugu only, except Linux commands.
+8. TELUGU VOICEOVER SCRIPT
+- This section must be Telugu script, not Roman Telugu.
+- Keep Linux commands in English/code format.
 - Make it natural for ${videoLength || "35 seconds"}.
 - Add pause marks like [pause], [short pause].
 - Use motivational ending.
-- Do not use Telugu script.
 - Do not make it too formal.
 - Make it sound like a normal tech creator speaking.
 
@@ -490,7 +496,7 @@ Output structure:
 - Include terminal actions and caption text.
 
 10. INSTAGRAM CAPTION
-- Caption can be Roman Telugu + English hashtags.
+- Caption can be Telugu script + English hashtags.
 - Keep it short.
 
 11. HASHTAGS
@@ -503,7 +509,8 @@ Rules:
 - Beginner-friendly.
 - No dangerous commands without safe demo folder.
 - Keep commands exact.
-- Roman Telugu voiceover must be easy to paste into ElevenLabs/CapCut TTS.
+- Telugu voiceover must be easy to paste into ElevenLabs/CapCut TTS.
+- Never output Roman Telugu in the TELUGU VOICEOVER SCRIPT section.
 `;
 
     const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
@@ -518,7 +525,7 @@ Rules:
         messages: [
           {
             role: "system",
-            content: "You create safe beginner Linux learning guides and Roman Telugu no-face video voiceover scripts."
+            content: "You create safe beginner Linux learning guides and Telugu script voiceover scripts. Voiceover must use Telugu script, not Roman Telugu."
           },
           {
             role: "user",
@@ -526,7 +533,7 @@ Rules:
           }
         ],
         max_tokens: 1900,
-        temperature: 0.55
+        temperature: 0.45
       })
     });
 
@@ -550,5 +557,5 @@ Rules:
 });
 
 app.listen(PORT, () => {
-  console.log(`Roman Telugu voiceover app running on port ${PORT}`);
+  console.log(`Telugu script voiceover app running on port ${PORT}`);
 });

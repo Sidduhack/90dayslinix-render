@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v3-roman-telugu-voiceover",
-  "version": "3.0.0",
-  "description": "Render web service for Linux 90 Days Challenge with Roman Telugu voiceover output",
+  "name": "linux-render-v4-telugu-script-voiceover",
+  "version": "4.0.0",
+  "description": "Render web service for Linux 90 Days Challenge with Telugu script voiceover output",
   "main": "server.js",
   "type": "module",
   "scripts": {

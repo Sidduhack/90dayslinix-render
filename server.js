@@ -14,7 +14,7 @@ const html = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Deep Linux Command Voiceover</title>
+<title>Native Telugu Linux Voiceover</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#070b12;color:#f3f7ff;font-family:Arial,"Noto Sans Telugu",sans-serif}
@@ -44,9 +44,9 @@ code{color:#9ed0ff}
 <body>
 <main>
 <section class="hero">
-<p class="badge">Linux Challenge • v8 Deep Command + Voiceover</p>
-<h1>Deep Command Explanation + Telugu Voiceover</h1>
-<p class="sub">Command ని deeply explain చేస్తుంది. Meaning, syntax, options, output, use cases, mistakes, errors, fixes, safe examples, and Telugu all-in-one voiceover ఇస్తుంది.</p>
+<p class="badge">Linux Challenge • v9 Native Telugu Voiceover</p>
+<h1>Native Telugu + English Tech Words</h1>
+<p class="sub">Full formal Telugu కాదు. Native Telugu creator మాట్లాడినట్టు output వస్తుంది: “terminal లో”, “folder path”, “command work అయింది”, “error fix చేయాలి” లాంటి natural style.</p>
 </section>
 
 <section class="grid">
@@ -82,32 +82,32 @@ code{color:#9ed0ff}
 <option>2 minutes</option>
 </select>
 
-<label>Voiceover style</label>
+<label>Native Telugu style</label>
 <select id="voiceEmotion">
-<option>Friendly motivational teacher</option>
-<option>Calm deep explainer</option>
-<option>Energetic Instagram tech creator</option>
-<option>Professional tutorial narrator</option>
+<option>Native friendly Telugu tech creator</option>
+<option>Native motivational Telugu teacher</option>
+<option>Calm native Telugu explainer</option>
+<option>Fast Instagram Telugu tech style</option>
 </select>
 
 <label>Output mode</label>
 <select id="outputMode">
-<option>Deep guide + Telugu voiceover</option>
+<option>Deep guide + native Telugu voiceover</option>
 <option>Only deep command guide</option>
-<option>Only deep Telugu voiceover</option>
+<option>Only native Telugu voiceover</option>
 </select>
 
 <label>Extra instruction</label>
-<textarea id="extra" placeholder="Example: Explain flags also. Add Termux errors. Make voiceover slow and clear."></textarea>
+<textarea id="extra" placeholder="Example: Use more spoken Telugu, not textbook Telugu. Add Termux beginner mistakes."></textarea>
 
-<button class="primary" id="generateBtn">Generate Deep Output</button>
-<div class="note"><b>Voiceover rule:</b> Section three voiceover Telugu script లో one continuous script గా ఉంటుంది. Direct digits avoid చేస్తుంది. Commands exact గా ఉంటాయి.</div>
+<button class="primary" id="generateBtn">Generate Native Telugu Output</button>
+<div class="note"><b>Native style rule:</b> Voiceover లో pure textbook Telugu వద్దు. Telugu script + English tech words natural గా mix అవ్వాలి. Example: <code>terminal లో pwd command type చేయండి</code>.</div>
 <p class="small">Render Environment లో <b>NVIDIA_API_KEY</b> add చేయాలి. Optional: <b>NIM_MODEL</b>.</p>
 </section>
 
 <section class="output">
 <div class="head"><h2>Generated Output</h2><button class="secondary" id="copyBtn">Copy</button></div>
-<pre id="output">మీ deep command explanation + voiceover output ఇక్కడ కనిపిస్తుంది.</pre>
+<pre id="output">మీ native Telugu voiceover output ఇక్కడ కనిపిస్తుంది.</pre>
 </section>
 </section>
 </main>
@@ -132,7 +132,7 @@ $("generateBtn").onclick = async ()=>{
     outputMode: $("outputMode").value,
     extra: $("extra").value.trim()
   };
-  $("output").textContent = "Generating deep command explanation and Telugu voiceover... Please wait.";
+  $("output").textContent = "Generating native Telugu command explanation and voiceover... Please wait.";
   try{
     const response = await fetch("/api/generate", {
       method:"POST",
@@ -161,7 +161,7 @@ $("copyBtn").onclick = async ()=>{
 app.get("/", (req, res) => res.type("html").send(html));
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, app: "Linux Deep Command Voiceover Generator", version: "8.0.0" });
+  res.json({ ok: true, app: "Linux Native Telugu Voiceover Generator", version: "9.0.0" });
 });
 
 app.post("/api/generate", async (req, res) => {
@@ -182,17 +182,35 @@ app.post("/api/generate", async (req, res) => {
     const model = process.env.NIM_MODEL || "meta/llama-3.1-8b-instruct";
 
     const prompt = `
-You are a Linux teacher, beginner mentor, and short-form content script writer.
+You are a Telugu-speaking Linux teacher and short-form content creator.
 
 Generate output for a "90 Days Linux Basics Challenge".
 
-The user wants deeper command explanation AND a voiceover for that explanation.
+The user does NOT want full formal Telugu.
+The user wants NATIVE SPOKEN TELUGU STYLE:
+- Telugu script + natural English tech words.
+- Like a real Telugu tech creator speaking.
+- Do not use pure textbook Telugu.
+- Do not over-translate tech words.
+- Use common words naturally: Linux, command, terminal, folder, file, path, output, install, package, error, fix, permission, version, directory, current location, enter, type.
+- Use Telugu grammar around English tech words.
+- Example native style:
+  "ఈ రోజు మనం \`pwd\` command గురించి deep గా తెలుసుకుందాం."
+  "Terminal లో మనం ప్రస్తుతం ఏ folder లో ఉన్నామో తెలుసుకోవడానికి ఈ command use అవుతుంది."
+  "ఇప్పుడు \`pwd\` type చేసి Enter press చేయండి."
+  "Path కనిపిస్తే command correct గా work అయింది."
+- Avoid overly formal words such as:
+  "ఆదేశం" instead of command,
+  "సంచయం" instead of folder,
+  "దోషం" instead of error,
+  "అనుమతి నిరాకరించబడింది" instead of permission denied.
+Use natural creator language.
 
 Follow this 13-section structure exactly:
 
 1. VIDEO TITLE
 2. 3 HOOK OPTIONS
-3. DEEP VOICEOVER SCRIPT WITH EXPRESSIONS AND RHYTHM
+3. NATIVE TELUGU VOICEOVER SCRIPT WITH EXPRESSIONS AND RHYTHM
 4. SCREEN RECORDING PLAN WITH TIMELINE
 5. REQUIREMENTS
 6. TERMUX INSTALL COMMANDS
@@ -210,16 +228,16 @@ Command/topic: ${command}
 Environment: ${environment || "Termux on Android"}
 Explanation depth: ${depth || "Deep beginner explanation"}
 Voiceover length: ${voiceLength || "60 seconds"}
-Voice emotion: ${voiceEmotion || "Friendly motivational teacher"}
-Output mode: ${outputMode || "Deep guide + Telugu voiceover"}
+Native Telugu style: ${voiceEmotion || "Native friendly Telugu tech creator"}
+Output mode: ${outputMode || "Deep guide + native Telugu voiceover"}
 Extra instruction: ${extra || "No extra instruction"}
 
 SECTION 3 VOICEOVER RULES:
 - Section 3 must be ONE continuous paste-ready voiceover script.
-- Voiceover must explain the command more deeply, but still beginner-friendly.
-- Do NOT split it into many "Voiceover:" chunks.
-- Spoken text must be in Telugu script.
+- Use Telugu script but native spoken Telugu style.
+- Mix English tech words naturally.
 - Do NOT write Roman Telugu.
+- Do NOT write full formal Telugu.
 - Linux commands, package names, file paths, flags, URLs, and error messages must remain in English/code format.
 - Use expression and rhythm tags in square brackets.
 - Example tags: [soft background music], [warm tone], [curious tone], [short pause], [pause], [confident], [slowly], [motivational tone].
@@ -236,9 +254,10 @@ SECTION 3 VOICEOVER RULES:
   f) One common mistake
   g) Motivation/follow CTA
 - Avoid lines like "Screen మీద మీరు..." unless necessary.
+- Make it sound like a native Telugu person talking to a beginner friend.
 
 SECTION 8 DEEP COMMAND EXPLANATION RULES:
-Explain deeply in English with clear bullets:
+Explain deeply in simple English, not full Telugu:
 - Command purpose
 - Basic syntax
 - How the command works conceptually
@@ -261,7 +280,7 @@ OTHER SECTIONS:
 7. UBUNTU/DEBIAN INSTALL COMMANDS - if none, say "None required."
 9. COMMON ERRORS AND FIXES - realistic errors only.
 10. PRACTICE TASK - two to three safe tasks.
-11. INSTAGRAM CAPTION - short caption. Telugu script allowed.
+11. INSTAGRAM CAPTION - short caption in native Telugu + English tech words.
 12. HASHTAGS - eight to sixteen hashtags.
 13. SAFETY NOTE - clear beginner warning.
 
@@ -282,12 +301,12 @@ Return only the 13-section output. No extra introduction.
         messages: [
           {
             role: "system",
-            content: "Generate deep Linux command guides with one continuous Telugu-script voiceover. Do not use Roman Telugu in voiceover. Keep commands in English."
+            content: "Generate deep Linux command guides with one continuous native spoken Telugu-script voiceover. Do not use Roman Telugu. Do not use full formal Telugu. Use natural Telugu + English tech words."
           },
           { role: "user", content: prompt }
         ],
         max_tokens: 2600,
-        temperature: 0.36
+        temperature: 0.42
       })
     });
 
@@ -304,4 +323,4 @@ Return only the 13-section output. No extra introduction.
   }
 });
 
-app.listen(PORT, () => console.log(`Deep command voiceover app running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Native Telugu voiceover app running on port ${PORT}`));

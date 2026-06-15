@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v8-deep-command-voiceover",
-  "version": "8.0.0",
-  "description": "Deep Linux command explanation plus Telugu all-in-one voiceover",
+  "name": "linux-render-v9-native-telugu-voiceover",
+  "version": "9.0.0",
+  "description": "Deep Linux command explanation with native spoken Telugu voiceover",
   "main": "server.js",
   "type": "module",
   "scripts": {

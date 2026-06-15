@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v16-debug-fixed-button",
-  "version": "16.0.0",
-  "description": "Multi-model Linux reel generator with fixed button/status/debug test",
+  "name": "linux-render-v17-full-voiceover-deep-learning",
+  "version": "17.0.0",
+  "description": "Linux reel generator with full-video native Telugu voiceover and deep learning guide",
   "main": "server.js",
   "type": "module",
   "scripts": {

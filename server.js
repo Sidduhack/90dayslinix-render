@@ -5,14 +5,13 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 10000;
-
 app.use(express.json({ limit: "1mb" }));
 
 const commands = ["pwd","ls","cd","mkdir","touch","cat","cp","mv","rm","chmod","chown","git","curl","wget","grep","find","ps","top","kill","df","du","free","uname","tar","zip/unzip","bash script"];
 
 const DEFAULT_MODELS = {
   planner: "meta/llama-3.3-70b-instruct",
-  deep: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+  deep: "meta/llama-3.3-70b-instruct",
   voice: "meta/llama-3.3-70b-instruct",
   psychology: "meta/llama-3.3-70b-instruct",
   fallback: "meta/llama-3.3-70b-instruct"
@@ -32,7 +31,7 @@ function getTag(text, tag, fallback = "") {
   return match ? match[1].trim() : fallback;
 }
 
-async function callNvidia(model, prompt, maxTokens = 1400, temperature = 0.25) {
+async function callNvidia(model, prompt, maxTokens = 1800, temperature = 0.25) {
   const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -45,7 +44,7 @@ async function callNvidia(model, prompt, maxTokens = 1400, temperature = 0.25) {
       messages: [
         {
           role: "system",
-          content: "Return tagged content only. No JSON. No markdown fences. Follow the requested tags exactly."
+          content: "Return tagged content only. No JSON. No markdown fences. Follow tags exactly."
         },
         { role: "user", content: prompt }
       ],
@@ -66,7 +65,6 @@ async function callNvidia(model, prompt, maxTokens = 1400, temperature = 0.25) {
 async function callSpecialist(role, prompt, maxTokens, temperature) {
   const specialist = getModel(role);
   const fallback = getModel("fallback");
-
   try {
     return {
       text: await callNvidia(specialist, prompt, maxTokens, temperature),
@@ -85,13 +83,14 @@ async function callSpecialist(role, prompt, maxTokens, temperature) {
 
 function formatOutput(reviewed, modelInfo) {
   const modelLine = `Planner: ${modelInfo.planner}${modelInfo.plannerFallback ? " (fallback used)" : ""}
-Deep Linux: ${modelInfo.deep}${modelInfo.deepFallback ? " (fallback used)" : ""}
-Native Telugu Voice: ${modelInfo.voice}${modelInfo.voiceFallback ? " (fallback used)" : ""}
+Deep Learning: ${modelInfo.deep}${modelInfo.deepFallback ? " (fallback used)" : ""}
+Full Voiceover: ${modelInfo.voice}${modelInfo.voiceFallback ? " (fallback used)" : ""}
 Psychology Reviewer: ${modelInfo.psychology}${modelInfo.psychologyFallback ? " (fallback used)" : ""}`;
 
   const videoTitle = getTag(reviewed, "video_title", "\"Linux Command Tutorial\"");
   const hooks = getTag(reviewed, "hooks", "- Learn this Linux command clearly.\n- Fix beginner confusion.\n- Practice Linux visually.");
-  const voiceover = getTag(reviewed, "voiceover", "[warm tone]\nఈ రోజు మనం Linux command ని simple గా నేర్చుకుందాం. [pause]");
+  const fullVoiceover = getTag(reviewed, "full_voiceover", "[warm tone]\nఈ రోజు మనం Linux command ని deep గా నేర్చుకుందాం. [pause]");
+  const sectionVoiceover = getTag(reviewed, "section_wise_voiceover", "- Hook voiceover\n- Explanation voiceover\n- Demo voiceover\n- Error fix voiceover\n- CTA voiceover");
   const visualStyle = getTag(reviewed, "visual_style", "- Dark black grid background\n- Neon green and white text\n- Terminal recording with zoom");
   const editTimeline = getTag(reviewed, "edit_timeline", "- 0s-3s: Show title\n- 3s-15s: Explain command\n- 15s-35s: Terminal demo and error fix");
   const requirements = getTag(reviewed, "requirements", "- No extra package required.");
@@ -99,8 +98,10 @@ Psychology Reviewer: ${modelInfo.psychology}${modelInfo.psychologyFallback ? " (
   const ubuntu = getTag(reviewed, "ubuntu_commands", "- None required.");
   const examples = getTag(reviewed, "main_examples", "- command");
   const explanation = getTag(reviewed, "deep_explanation", "Command purpose, syntax, output meaning, use cases, mistakes, and safe examples.");
+  const deepLearningGuide = getTag(reviewed, "deep_learning_guide", "- Meaning\n- Mental model\n- Real examples\n- Mistakes\n- Practice");
   const errors = getTag(reviewed, "errors_fixes", "- No common installation error for this command.");
-  const task = getTag(reviewed, "practice_task", "- Try the command in Termux.\n- Observe the output carefully.");
+  const practice = getTag(reviewed, "practice_task", "- Try the command in Termux.\n- Observe the output carefully.");
+  const quiz = getTag(reviewed, "mini_quiz", "- What does this command show?\n- When should you use it?");
   const caption = getTag(reviewed, "caption", "Linux basics challenge. Learn one command with real practice.");
   const hashtags = getTag(reviewed, "hashtags", "#Linux #Termux #LinuxForBeginners");
   const psychologyNotes = getTag(reviewed, "psychology_notes", "- Hook improved for curiosity.\n- Repetition removed.\n- CTA made motivating.");
@@ -115,46 +116,55 @@ ${videoTitle}
 2. 3 HOOK OPTIONS
 ${hooks}
 
-3. NATIVE TELUGU VOICEOVER SCRIPT WITH EXPRESSIONS, RHYTHM, AND ERROR FIX MOMENT
-${voiceover}
+3. FULL VIDEO VOICEOVER SCRIPT
+${fullVoiceover}
 
-4. REFERENCE REEL VISUAL STYLE
+4. SECTION-WISE VOICEOVER BREAKDOWN
+${sectionVoiceover}
+
+5. REFERENCE REEL VISUAL STYLE
 ${visualStyle}
 
-5. REFERENCE STYLE EDIT TIMELINE
+6. REFERENCE STYLE EDIT TIMELINE
 ${editTimeline}
 
-6. REQUIREMENTS
+7. REQUIREMENTS
 ${requirements}
 
-7. TERMUX INSTALL COMMANDS
+8. TERMUX INSTALL COMMANDS
 ${termux}
 
-8. UBUNTU/DEBIAN INSTALL COMMANDS
+9. UBUNTU/DEBIAN INSTALL COMMANDS
 ${ubuntu}
 
-9. MAIN COMMAND EXAMPLES
+10. MAIN COMMAND EXAMPLES
 ${examples}
 
-10. DEEP COMMAND EXPLANATION
+11. DEEP COMMAND EXPLANATION
 ${explanation}
 
-11. COMMON ERRORS AND FIXES
+12. DEEP LEARNING GUIDE
+${deepLearningGuide}
+
+13. COMMON ERRORS AND FIXES
 ${errors}
 
-12. PRACTICE TASK
-${task}
+14. PRACTICE TASK
+${practice}
 
-13. INSTAGRAM CAPTION
+15. MINI QUIZ FOR VIEWERS
+${quiz}
+
+16. INSTAGRAM CAPTION
 ${caption}
 
-14. HASHTAGS
+17. HASHTAGS
 ${hashtags}
 
-15. PSYCHOLOGY REVIEW NOTES
+18. PSYCHOLOGY REVIEW NOTES
 ${psychologyNotes}
 
-16. SAFETY NOTE
+19. SAFETY NOTE
 ${safety}`;
 }
 
@@ -163,7 +173,7 @@ const html = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Linux Multi-Model Generator v16</title>
+<title>Linux Full Voiceover Deep Learning</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#070b12;color:#f3f7ff;font-family:Arial,"Noto Sans Telugu",sans-serif}
@@ -181,7 +191,7 @@ textarea{min-height:98px;resize:vertical}
 button{border:0;padding:13px 16px;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer}
 .primary{width:100%;margin-top:16px;background:linear-gradient(135deg,#40a6ff,#7c5cff);color:#06111f}
 .secondary{background:#1b2638;color:#dceaff;border:1px solid #33425a}
-pre{white-space:pre-wrap;word-wrap:break-word;line-height:1.72;color:#e9f1ff;background:#050912;padding:16px;border-radius:14px;border:1px solid #202d40;min-height:720px;overflow-x:auto;font-size:15px;font-family:Arial,"Noto Sans Telugu",sans-serif}
+pre{white-space:pre-wrap;word-wrap:break-word;line-height:1.72;color:#e9f1ff;background:#050912;padding:16px;border-radius:14px;border:1px solid #202d40;min-height:740px;overflow-x:auto;font-size:15px;font-family:Arial,"Noto Sans Telugu",sans-serif}
 .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .pill{border:1px solid #30425d;background:#111c2e;color:#d7e7ff;border-radius:999px;padding:8px 10px;font-size:13px;cursor:pointer}
 .note{border-left:4px solid #55f0a6;background:rgba(85,240,166,.08);padding:12px;border-radius:12px;color:#c8ffe3;line-height:1.5;font-size:14px;margin-top:14px}
@@ -194,9 +204,9 @@ code{color:#9ed0ff}
 <body>
 <main>
 <section class="hero">
-<p class="badge">Linux Challenge • v16 Debug Fixed</p>
-<h1>Multi-Model + Psychology Reviewer</h1>
-<p class="sub">This version has visible status, test API button, stronger click handling, and better error messages. If Generate is clicked, the output must change immediately.</p>
+<p class="badge">Linux Challenge • v17 Full Voiceover + Deep Learning</p>
+<h1>Full Video Voiceover + Deep Learning Guide</h1>
+<p class="sub">This version creates voiceover for the full video, section-wise voiceover, deep command explanation, deep learning guide, mini quiz, practice task, error fix, and psychology review.</p>
 </section>
 
 <section class="grid">
@@ -224,20 +234,28 @@ code{color:#9ed0ff}
 <option>Fast Instagram dark tech style</option>
 </select>
 
-<label>Explanation depth</label>
+<label>Learning depth</label>
 <select id="depth">
-<option>Deep beginner explanation</option>
-<option>Simple beginner explanation</option>
-<option>Very deep practical explanation</option>
-<option>Interview-style explanation</option>
+<option>Deep beginner learning</option>
+<option>Simple beginner learning</option>
+<option>Very deep practical learning</option>
+<option>Interview-style deep learning</option>
 </select>
 
 <label>Video length</label>
 <select id="voiceLength">
-<option>45 seconds</option>
 <option>60 seconds</option>
 <option>90 seconds</option>
 <option>2 minutes</option>
+<option>3 minutes</option>
+</select>
+
+<label>Voiceover coverage</label>
+<select id="voiceCoverage">
+<option>Full video voiceover + section-wise voiceover</option>
+<option>Only full video voiceover</option>
+<option>Detailed teaching voiceover</option>
+<option>Short reel voiceover</option>
 </select>
 
 <label>Error fix style</label>
@@ -265,20 +283,19 @@ code{color:#9ed0ff}
 </select>
 
 <label>Extra instruction</label>
-<textarea id="extra" placeholder="Example: Make the first seconds strong. Reduce repetition. Make CTA natural."></textarea>
+<textarea id="extra" placeholder="Example: Make the voiceover cover every visual step. Teach deeply but keep it beginner friendly."></textarea>
 
-<button type="button" class="primary" id="generateBtn">Generate With Psychology Review</button>
+<button type="button" class="primary" id="generateBtn">Generate Full Voiceover + Deep Learning</button>
 <button type="button" class="secondary" id="testBtn" style="width:100%;margin-top:10px;">Test API Connection</button>
 
 <div class="status" id="statusBox">Status: Page loaded. Click Generate.</div>
-
-<div class="note"><b>Debug:</b> If output stays as placeholder after clicking Generate, check this status box first.</div>
-<p class="small">Render vars: <b>NVIDIA_API_KEY</b>, <b>MODEL_PLANNER</b>, <b>MODEL_DEEP</b>, <b>MODEL_VOICE</b>, <b>MODEL_PSYCHOLOGY</b>, <b>MODEL_FALLBACK</b>.</p>
+<div class="note"><b>New:</b> Full video voiceover, section-wise voiceover, deep learning guide, mini quiz, and psychology correction.</div>
+<p class="small">Render vars: NVIDIA_API_KEY, MODEL_PLANNER, MODEL_DEEP, MODEL_VOICE, MODEL_PSYCHOLOGY, MODEL_FALLBACK.</p>
 </section>
 
 <section class="output">
 <div class="head"><h2>Generated Output</h2><button type="button" class="secondary" id="copyBtn">Copy</button></div>
-<pre id="output">Click Generate. Your multi-model psychology reviewed output will appear here.</pre>
+<pre id="output">Click Generate. Full voiceover and deep learning output will appear here.</pre>
 </section>
 </section>
 </main>
@@ -290,13 +307,8 @@ code{color:#9ed0ff}
   const statusBox = $("statusBox");
   const output = $("output");
 
-  function setStatus(msg){
-    statusBox.textContent = "Status: " + msg;
-  }
-
-  function setOutput(msg){
-    output.textContent = msg;
-  }
+  function setStatus(msg){ statusBox.textContent = "Status: " + msg; }
+  function setOutput(msg){ output.textContent = msg; }
 
   commands.forEach(cmd=>{
     const span=document.createElement("span");
@@ -328,14 +340,15 @@ code{color:#9ed0ff}
       visualStyle: $("visualStyle").value,
       depth: $("depth").value,
       voiceLength: $("voiceLength").value,
+      voiceCoverage: $("voiceCoverage").value,
       errorStyle: $("errorStyle").value,
       voiceEmotion: $("voiceEmotion").value,
       psychologyFocus: $("psychologyFocus").value,
       extra: $("extra").value.trim()
     };
 
-    setStatus("Generate button clicked. Sending request...");
-    setOutput("Running multi-model pipeline...\\n\\nStep one: planner model\\nStep two: deep Linux model\\nStep three: native Telugu voice model\\nStep four: psychology reviewer\\n\\nPlease wait. This can take some time on Render.");
+    setStatus("Generate clicked. Sending request...");
+    setOutput("Running full pipeline...\\n\\nStep one: visual planner\\nStep two: deep learning expert\\nStep three: full Telugu voiceover writer\\nStep four: psychology reviewer and correction\\n\\nPlease wait.");
 
     try{
       const response = await fetch("/api/generate", {
@@ -343,7 +356,6 @@ code{color:#9ed0ff}
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify(payload)
       });
-
       setStatus("Server responded. Reading output...");
       const data = await response.json();
 
@@ -380,10 +392,6 @@ code{color:#9ed0ff}
 
 app.get("/", (req, res) => res.type("html").send(html));
 
-app.get("/health", (req, res) => {
-  res.json({ ok: true, app: "Linux Multi-Model Psychology Reviewer Debug", version: "16.0.0" });
-});
-
 app.get("/api/test", (req, res) => {
   res.json({
     ok: true,
@@ -399,9 +407,13 @@ app.get("/api/test", (req, res) => {
   });
 });
 
+app.get("/health", (req, res) => {
+  res.json({ ok: true, app: "Linux Full Voiceover Deep Learning", version: "17.0.0" });
+});
+
 app.post("/api/generate", async (req, res) => {
   try {
-    const { day, command, environment, visualStyle, depth, voiceLength, errorStyle, voiceEmotion, psychologyFocus, extra } = req.body;
+    const { day, command, environment, visualStyle, depth, voiceLength, voiceCoverage, errorStyle, voiceEmotion, psychologyFocus, extra } = req.body;
 
     if (!process.env.NVIDIA_API_KEY) {
       return res.status(500).json({
@@ -417,7 +429,7 @@ app.post("/api/generate", async (req, res) => {
     const plannerPrompt = `
 Return tagged content only. No JSON. No markdown fences.
 
-Fill only these tags:
+Fill only:
 <video_title>...</video_title>
 <hooks>...</hooks>
 <visual_style>...</visual_style>
@@ -438,9 +450,9 @@ extra: ${extra || "No extra instruction"}
 
 Rules:
 - video_title: English only.
-- hooks: exactly three English bullet lines.
-- visual_style: dark black grid, neon green/white text, dotted arrows, Linux icon, terminal recording, zoom on output.
-- edit_timeline: English only, timed visual actions.
+- hooks: exactly three English bullet lines, strong first three seconds.
+- visual_style: dark grid, neon green/white text, dotted arrows, Linux icon, terminal screen recording, zoom on output.
+- edit_timeline: English only, timed visual actions. Cover every step from hook to CTA.
 - caption: native Telugu + English tech words allowed.
 - hashtags: eight to sixteen hashtags.
 - safety_note: English only.
@@ -449,45 +461,52 @@ Rules:
     const deepPrompt = `
 Return tagged content only. No JSON. No markdown fences.
 
-Fill only these tags:
+Fill only:
 <requirements>...</requirements>
 <termux_commands>...</termux_commands>
 <ubuntu_commands>...</ubuntu_commands>
 <main_examples>...</main_examples>
 <deep_explanation>...</deep_explanation>
+<deep_learning_guide>...</deep_learning_guide>
 <errors_fixes>...</errors_fixes>
 <practice_task>...</practice_task>
+<mini_quiz>...</mini_quiz>
 
 Inputs:
 command: ${command}
 environment: ${environment}
-depth: ${depth}
+learning depth: ${depth}
 
 Rules:
 - English only.
-- Accurate Linux explanation.
+- Teach deeply but beginner-friendly.
 - If no package needed, say "- No extra package required."
 - If no install command needed, say "- None required."
-- Include purpose, syntax, output meaning, flags/options, use cases, not-use cases, mistakes, related commands, safe examples, real project use.
-- Use realistic errors/confusions only.
+- deep_explanation must include purpose, syntax, how it works, output meaning, flags/options if any, use cases, not-use cases, beginner mistakes, related commands, safe examples, real project use.
+- deep_learning_guide must include: mental model, analogy, step-by-step understanding, memory trick, common misconception, how to practice.
+- errors_fixes must use realistic errors/confusions only.
+- mini_quiz must include three quick questions with answers.
+- For risky commands use safe demo folder only.
 `;
 
     const voicePrompt = `
 Return tagged content only. No JSON. No markdown fences.
 
-Fill only this tag:
-<voiceover>...</voiceover>
+Fill only:
+<full_voiceover>...</full_voiceover>
+<section_wise_voiceover>...</section_wise_voiceover>
 
 Inputs:
 day: ${day}
 command: ${command}
 environment: ${environment}
-voice length: ${voiceLength}
+video length: ${voiceLength}
+voiceover coverage: ${voiceCoverage}
 error style: ${errorStyle}
 voice style: ${voiceEmotion}
 
-Rules:
-- One continuous voiceover only.
+Rules for full_voiceover:
+- Voiceover must cover the full video: hook, command meaning, deep explanation, terminal demo, output meaning, error/confusion fix, practice task, mini quiz style question, CTA.
 - Telugu script + natural English tech words.
 - Native Telugu creator style, not textbook Telugu.
 - Do not use Roman Telugu.
@@ -495,17 +514,20 @@ Rules:
 - Use command, terminal, folder, path, output, error, fix, install, package, type, Enter, work.
 - Avoid ఆదేశం, సంచయం, దోషం, కార్యనిర్వహణ.
 - No repeated sentence or idea.
-- Maximum nine short lines.
 - Use [soft background music], [warm tone], [short pause], [pause], [surprised], [calm tone], [confident], [motivational tone].
-- No direct digits in voiceover.
+- No direct digits in spoken lines.
 - Commands stay exact, for example \`${command}\`.
-- Include error/confusion moment.
+- Include an error/confusion fix moment.
 - End with a short motivational follow CTA.
+
+Rules for section_wise_voiceover:
+- Make separate bullet lines for Hook voiceover, Concept voiceover, Terminal demo voiceover, Error fix voiceover, Practice voiceover, CTA voiceover.
+- Telugu script + English tech words.
 `;
 
-    const plan = await callSpecialist("planner", plannerPrompt, 1200, 0.25);
-    const deep = await callSpecialist("deep", deepPrompt, 1900, 0.18);
-    const voice = await callSpecialist("voice", voicePrompt, 1100, 0.32);
+    const plan = await callSpecialist("planner", plannerPrompt, 1500, 0.25);
+    const deep = await callSpecialist("deep", deepPrompt, 2600, 0.18);
+    const voice = await callSpecialist("voice", voicePrompt, 2200, 0.32);
 
     const reviewerPrompt = `
 Return tagged content only. No JSON. No markdown fences.
@@ -515,7 +537,8 @@ You are a viewer psychology, attention, retention, beginner-learning, and trust 
 Return ALL final tags:
 <video_title>...</video_title>
 <hooks>...</hooks>
-<voiceover>...</voiceover>
+<full_voiceover>...</full_voiceover>
+<section_wise_voiceover>...</section_wise_voiceover>
 <visual_style>...</visual_style>
 <edit_timeline>...</edit_timeline>
 <requirements>...</requirements>
@@ -523,8 +546,10 @@ Return ALL final tags:
 <ubuntu_commands>...</ubuntu_commands>
 <main_examples>...</main_examples>
 <deep_explanation>...</deep_explanation>
+<deep_learning_guide>...</deep_learning_guide>
 <errors_fixes>...</errors_fixes>
 <practice_task>...</practice_task>
+<mini_quiz>...</mini_quiz>
 <caption>...</caption>
 <hashtags>...</hashtags>
 <psychology_notes>...</psychology_notes>
@@ -537,10 +562,10 @@ Extra: ${extra || "No extra instruction"}
 
 Improve:
 - Hook strength
-- Curiosity
-- Retention
+- Full voiceover coverage
+- Deep learning clarity
 - Beginner confidence
-- Trust
+- Curiosity and retention
 - Error anxiety reduction
 - Repetition removal
 - Native Telugu flow
@@ -550,25 +575,25 @@ Improve:
 DRAFT PLAN:
 ${plan.text}
 
-DRAFT DEEP EXPLANATION:
+DRAFT DEEP LEARNING:
 ${deep.text}
 
 DRAFT VOICEOVER:
 ${voice.text}
 
-Strict voiceover rules:
-- Native spoken Telugu style.
+Strict:
+- Voiceover must be native spoken Telugu style.
 - Telugu script + English tech words.
 - No Roman Telugu.
 - No formal Telugu.
 - No repeated sentences.
-- Maximum nine short lines.
 - Include error/confusion fix moment.
-- No direct digits.
+- No direct digits in spoken lines.
 - Keep expression tags.
+- Deep explanation and deep learning guide must be English only.
 `;
 
-    const review = await callSpecialist("psychology", reviewerPrompt, 3300, 0.22);
+    const review = await callSpecialist("psychology", reviewerPrompt, 4200, 0.22);
 
     const output = formatOutput(review.text, {
       planner: plan.model,
@@ -587,4 +612,4 @@ Strict voiceover rules:
   }
 });
 
-app.listen(PORT, () => console.log(`Multi-model psychology reviewer debug app running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Full voiceover deep learning app running on port ${PORT}`));

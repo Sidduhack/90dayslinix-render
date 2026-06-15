@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v15-psychology-reviewer",
-  "version": "15.0.0",
-  "description": "Multi-model Linux reel generator with psychology reviewer correction model",
+  "name": "linux-render-v16-debug-fixed-button",
+  "version": "16.0.0",
+  "description": "Multi-model Linux reel generator with fixed button/status/debug test",
   "main": "server.js",
   "type": "module",
   "scripts": {

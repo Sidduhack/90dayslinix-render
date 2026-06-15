@@ -5,6 +5,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 10000;
+
 app.use(express.json({ limit: "1mb" }));
 
 const commands = ["pwd","ls","cd","mkdir","touch","cat","cp","mv","rm","chmod","chown","git","curl","wget","grep","find","ps","top","kill","df","du","free","uname","tar","zip/unzip","bash script"];
@@ -18,11 +19,11 @@ const DEFAULT_MODELS = {
 };
 
 function getModel(role) {
-  if (role === "planner") return process.env.MODEL_PLANNER || DEFAULT_MODELS.planner;
-  if (role === "deep") return process.env.MODEL_DEEP || DEFAULT_MODELS.deep;
-  if (role === "voice") return process.env.MODEL_VOICE || DEFAULT_MODELS.voice;
-  if (role === "psychology") return process.env.MODEL_PSYCHOLOGY || DEFAULT_MODELS.psychology;
-  return process.env.MODEL_FALLBACK || DEFAULT_MODELS.fallback;
+  if (role === "planner") return process.env.MODEL_PLANNER || process.env.NIM_MODEL || DEFAULT_MODELS.planner;
+  if (role === "deep") return process.env.MODEL_DEEP || process.env.NIM_MODEL || DEFAULT_MODELS.deep;
+  if (role === "voice") return process.env.MODEL_VOICE || process.env.NIM_MODEL || DEFAULT_MODELS.voice;
+  if (role === "psychology") return process.env.MODEL_PSYCHOLOGY || process.env.NIM_MODEL || DEFAULT_MODELS.psychology;
+  return process.env.MODEL_FALLBACK || process.env.NIM_MODEL || DEFAULT_MODELS.fallback;
 }
 
 function getTag(text, tag, fallback = "") {
@@ -65,6 +66,7 @@ async function callNvidia(model, prompt, maxTokens = 1400, temperature = 0.25) {
 async function callSpecialist(role, prompt, maxTokens, temperature) {
   const specialist = getModel(role);
   const fallback = getModel("fallback");
+
   try {
     return {
       text: await callNvidia(specialist, prompt, maxTokens, temperature),
@@ -161,7 +163,7 @@ const html = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Linux Multi-Model Psychology Reviewer</title>
+<title>Linux Multi-Model Generator v16</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#070b12;color:#f3f7ff;font-family:Arial,"Noto Sans Telugu",sans-serif}
@@ -183,6 +185,7 @@ pre{white-space:pre-wrap;word-wrap:break-word;line-height:1.72;color:#e9f1ff;bac
 .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .pill{border:1px solid #30425d;background:#111c2e;color:#d7e7ff;border-radius:999px;padding:8px 10px;font-size:13px;cursor:pointer}
 .note{border-left:4px solid #55f0a6;background:rgba(85,240,166,.08);padding:12px;border-radius:12px;color:#c8ffe3;line-height:1.5;font-size:14px;margin-top:14px}
+.status{border:1px solid #35455d;background:#0c1320;padding:12px;border-radius:12px;color:#dceaff;line-height:1.5;font-size:14px;margin-top:14px}
 .head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
 .small{color:#aebbd0;font-size:13px;line-height:1.45}
 code{color:#9ed0ff}
@@ -191,9 +194,9 @@ code{color:#9ed0ff}
 <body>
 <main>
 <section class="hero">
-<p class="badge">Linux Challenge • v15 Psychology Reviewer</p>
-<h1>Multi-Model + Human Psychology Review</h1>
-<p class="sub">Planner model creates reel structure, deep model explains Linux, voice model writes native Telugu voiceover, and psychology reviewer corrects attention, emotion, clarity, repetition, and CTA.</p>
+<p class="badge">Linux Challenge • v16 Debug Fixed</p>
+<h1>Multi-Model + Psychology Reviewer</h1>
+<p class="sub">This version has visible status, test API button, stronger click handling, and better error messages. If Generate is clicked, the output must change immediately.</p>
 </section>
 
 <section class="grid">
@@ -262,64 +265,115 @@ code{color:#9ed0ff}
 </select>
 
 <label>Extra instruction</label>
-<textarea id="extra" placeholder="Example: Make the first 3 seconds very strong. Reduce repetition. Make CTA natural."></textarea>
+<textarea id="extra" placeholder="Example: Make the first seconds strong. Reduce repetition. Make CTA natural."></textarea>
 
-<button class="primary" id="generateBtn">Generate With Psychology Review</button>
-<div class="note"><b>Reviewer:</b> It checks hook strength, beginner fear, trust, repetition, emotional rhythm, error-fix confidence, and follow CTA.</div>
-<p class="small">Render Environment variables: <b>MODEL_PLANNER</b>, <b>MODEL_DEEP</b>, <b>MODEL_VOICE</b>, <b>MODEL_PSYCHOLOGY</b>, <b>MODEL_FALLBACK</b>.</p>
+<button type="button" class="primary" id="generateBtn">Generate With Psychology Review</button>
+<button type="button" class="secondary" id="testBtn" style="width:100%;margin-top:10px;">Test API Connection</button>
+
+<div class="status" id="statusBox">Status: Page loaded. Click Generate.</div>
+
+<div class="note"><b>Debug:</b> If output stays as placeholder after clicking Generate, check this status box first.</div>
+<p class="small">Render vars: <b>NVIDIA_API_KEY</b>, <b>MODEL_PLANNER</b>, <b>MODEL_DEEP</b>, <b>MODEL_VOICE</b>, <b>MODEL_PSYCHOLOGY</b>, <b>MODEL_FALLBACK</b>.</p>
 </section>
 
 <section class="output">
-<div class="head"><h2>Generated Output</h2><button class="secondary" id="copyBtn">Copy</button></div>
-<pre id="output">Multi-model psychology reviewed output ఇక్కడ కనిపిస్తుంది.</pre>
+<div class="head"><h2>Generated Output</h2><button type="button" class="secondary" id="copyBtn">Copy</button></div>
+<pre id="output">Click Generate. Your multi-model psychology reviewed output will appear here.</pre>
 </section>
 </section>
 </main>
 
 <script>
-const commands = ${JSON.stringify(commands)};
-const $ = id => document.getElementById(id);
-commands.forEach(cmd=>{
-  const span=document.createElement("span");
-  span.className="pill"; span.textContent=cmd;
-  span.onclick=()=>{$("command").value=cmd};
-  $("pills").appendChild(span);
-});
-$("generateBtn").onclick = async ()=>{
-  const payload = {
-    day: $("day").value.trim(),
-    command: $("command").value.trim(),
-    environment: $("environment").value,
-    visualStyle: $("visualStyle").value,
-    depth: $("depth").value,
-    voiceLength: $("voiceLength").value,
-    errorStyle: $("errorStyle").value,
-    voiceEmotion: $("voiceEmotion").value,
-    psychologyFocus: $("psychologyFocus").value,
-    extra: $("extra").value.trim()
-  };
-  $("output").textContent = "Running planner, deep Linux, voiceover, and psychology reviewer models... Please wait.";
-  try{
-    const response = await fetch("/api/generate", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(payload)
-    });
-    const data = await response.json();
-    if(!response.ok){
-      $("output").textContent = "Error:\\n" + (data.error || "Request failed") + "\\n\\n" + (data.details || "");
-      return;
-    }
-    $("output").textContent = data.output;
-  }catch(error){
-    $("output").textContent = "Error: " + error.message;
+(function(){
+  const commands = ${JSON.stringify(commands)};
+  const $ = id => document.getElementById(id);
+  const statusBox = $("statusBox");
+  const output = $("output");
+
+  function setStatus(msg){
+    statusBox.textContent = "Status: " + msg;
   }
-};
-$("copyBtn").onclick = async ()=>{
-  await navigator.clipboard.writeText($("output").textContent);
-  $("copyBtn").textContent="Copied";
-  setTimeout(()=>$("copyBtn").textContent="Copy",1200);
-};
+
+  function setOutput(msg){
+    output.textContent = msg;
+  }
+
+  commands.forEach(cmd=>{
+    const span=document.createElement("span");
+    span.className="pill";
+    span.textContent=cmd;
+    span.onclick=()=>{$("command").value=cmd};
+    $("pills").appendChild(span);
+  });
+
+  $("testBtn").addEventListener("click", async ()=>{
+    setStatus("Testing API connection...");
+    setOutput("Testing /api/test ...");
+    try{
+      const response = await fetch("/api/test");
+      const data = await response.json();
+      setOutput(JSON.stringify(data, null, 2));
+      setStatus(response.ok ? "API test completed." : "API test returned error.");
+    }catch(error){
+      setStatus("API test failed: " + error.message);
+      setOutput("API test failed:\\n" + error.stack);
+    }
+  });
+
+  $("generateBtn").addEventListener("click", async ()=>{
+    const payload = {
+      day: $("day").value.trim(),
+      command: $("command").value.trim(),
+      environment: $("environment").value,
+      visualStyle: $("visualStyle").value,
+      depth: $("depth").value,
+      voiceLength: $("voiceLength").value,
+      errorStyle: $("errorStyle").value,
+      voiceEmotion: $("voiceEmotion").value,
+      psychologyFocus: $("psychologyFocus").value,
+      extra: $("extra").value.trim()
+    };
+
+    setStatus("Generate button clicked. Sending request...");
+    setOutput("Running multi-model pipeline...\\n\\nStep one: planner model\\nStep two: deep Linux model\\nStep three: native Telugu voice model\\nStep four: psychology reviewer\\n\\nPlease wait. This can take some time on Render.");
+
+    try{
+      const response = await fetch("/api/generate", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload)
+      });
+
+      setStatus("Server responded. Reading output...");
+      const data = await response.json();
+
+      if(!response.ok){
+        setStatus("Generation failed.");
+        setOutput("Error:\\n" + (data.error || "Request failed") + "\\n\\nDetails:\\n" + (data.details || ""));
+        return;
+      }
+
+      setOutput(data.output || "No output returned from server.");
+      setStatus("Generation completed.");
+    }catch(error){
+      setStatus("Browser request failed: " + error.message);
+      setOutput("Browser request failed:\\n" + error.stack);
+    }
+  });
+
+  $("copyBtn").addEventListener("click", async ()=>{
+    try{
+      await navigator.clipboard.writeText(output.textContent);
+      setStatus("Copied output.");
+      $("copyBtn").textContent="Copied";
+      setTimeout(()=>$("copyBtn").textContent="Copy",1200);
+    }catch(error){
+      setStatus("Copy failed: " + error.message);
+    }
+  });
+
+  setStatus("JavaScript loaded successfully. Buttons are ready.");
+})();
 </script>
 </body>
 </html>`;
@@ -327,7 +381,22 @@ $("copyBtn").onclick = async ()=>{
 app.get("/", (req, res) => res.type("html").send(html));
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, app: "Linux Multi-Model Psychology Reviewer", version: "15.0.0" });
+  res.json({ ok: true, app: "Linux Multi-Model Psychology Reviewer Debug", version: "16.0.0" });
+});
+
+app.get("/api/test", (req, res) => {
+  res.json({
+    ok: true,
+    message: "Server and frontend connection working.",
+    hasNvidiaKey: Boolean(process.env.NVIDIA_API_KEY),
+    models: {
+      planner: getModel("planner"),
+      deep: getModel("deep"),
+      voice: getModel("voice"),
+      psychology: getModel("psychology"),
+      fallback: getModel("fallback")
+    }
+  });
 });
 
 app.post("/api/generate", async (req, res) => {
@@ -348,8 +417,6 @@ app.post("/api/generate", async (req, res) => {
     const plannerPrompt = `
 Return tagged content only. No JSON. No markdown fences.
 
-You are a viral short-form tech reel planner.
-
 Fill only these tags:
 <video_title>...</video_title>
 <hooks>...</hooks>
@@ -358,6 +425,8 @@ Fill only these tags:
 <caption>...</caption>
 <hashtags>...</hashtags>
 <safety_note>...</safety_note>
+
+Create a dark-grid Linux reel plan.
 
 Inputs:
 day: ${day}
@@ -370,18 +439,15 @@ extra: ${extra || "No extra instruction"}
 Rules:
 - video_title: English only.
 - hooks: exactly three English bullet lines.
-- visual_style: dark-grid Linux explainer style: neon green/white text, dotted arrows, simple Linux icon, terminal screen recording, zoom on output.
-- edit_timeline: English only, with timing and visual actions.
+- visual_style: dark black grid, neon green/white text, dotted arrows, Linux icon, terminal recording, zoom on output.
+- edit_timeline: English only, timed visual actions.
 - caption: native Telugu + English tech words allowed.
 - hashtags: eight to sixteen hashtags.
 - safety_note: English only.
-- Do not copy watermark, music, or exact assets from any creator.
 `;
 
     const deepPrompt = `
 Return tagged content only. No JSON. No markdown fences.
-
-You are a Linux expert teacher.
 
 Fill only these tags:
 <requirements>...</requirements>
@@ -399,18 +465,15 @@ depth: ${depth}
 
 Rules:
 - English only.
-- Explain accurately.
+- Accurate Linux explanation.
 - If no package needed, say "- No extra package required."
 - If no install command needed, say "- None required."
-- deep_explanation must include purpose, syntax, how it works, output meaning, flags/options if any, use cases, not-use cases, beginner mistakes, related commands, safe examples, real project use.
-- errors_fixes must use realistic errors/confusions only.
-- For risky commands use safe demo folder only.
+- Include purpose, syntax, output meaning, flags/options, use cases, not-use cases, mistakes, related commands, safe examples, real project use.
+- Use realistic errors/confusions only.
 `;
 
     const voicePrompt = `
 Return tagged content only. No JSON. No markdown fences.
-
-You are a native Telugu tech creator writing one paste-ready AI voiceover.
 
 Fill only this tag:
 <voiceover>...</voiceover>
@@ -429,16 +492,14 @@ Rules:
 - Native Telugu creator style, not textbook Telugu.
 - Do not use Roman Telugu.
 - Do not use full formal Telugu.
-- Use words like command, terminal, folder, path, output, error, fix, install, package, type, Enter, work.
-- Avoid formal words like ఆదేశం, సంచయం, దోషం, కార్యనిర్వహణ.
+- Use command, terminal, folder, path, output, error, fix, install, package, type, Enter, work.
+- Avoid ఆదేశం, సంచయం, దోషం, కార్యనిర్వహణ.
 - No repeated sentence or idea.
 - Maximum nine short lines.
-- Use tags like [soft background music], [warm tone], [short pause], [pause], [surprised], [calm tone], [confident], [motivational tone].
+- Use [soft background music], [warm tone], [short pause], [pause], [surprised], [calm tone], [confident], [motivational tone].
 - No direct digits in voiceover.
 - Commands stay exact, for example \`${command}\`.
-- Include error/confusion moment:
-  If real error likely: "ఓహ్, ఇక్కడ error వచ్చింది. tension పడొద్దు, fix చేద్దాం."
-  If command usually does not fail: "ఓహ్, output లో path చూసి confuse అయ్యారా? tension వద్దు, అది మీ current folder location."
+- Include error/confusion moment.
 - End with a short motivational follow CTA.
 `;
 
@@ -450,21 +511,6 @@ Rules:
 Return tagged content only. No JSON. No markdown fences.
 
 You are a viewer psychology, attention, retention, beginner-learning, and trust reviewer for short-form tech videos.
-
-You are NOT giving mental health advice. You are reviewing audience attention, clarity, motivation, trust, and beginner confidence.
-
-Your job:
-- Verify the full draft.
-- Correct weak hooks.
-- Remove repetition.
-- Make voiceover more native Telugu + English tech words.
-- Make the error-fix moment reduce beginner fear.
-- Improve curiosity in first seconds.
-- Improve emotional rhythm.
-- Make CTA natural.
-- Ensure no misleading claims.
-- Ensure no formal Telugu in voiceover.
-- Keep commands exact.
 
 Return ALL final tags:
 <video_title>...</video_title>
@@ -484,11 +530,22 @@ Return ALL final tags:
 <psychology_notes>...</psychology_notes>
 <safety_note>...</safety_note>
 
-INPUT DETAILS:
-command: ${command}
-environment: ${environment}
-psychology focus: ${psychologyFocus}
-extra: ${extra || "No extra instruction"}
+Review focus: ${psychologyFocus}
+Command: ${command}
+Environment: ${environment}
+Extra: ${extra || "No extra instruction"}
+
+Improve:
+- Hook strength
+- Curiosity
+- Retention
+- Beginner confidence
+- Trust
+- Error anxiety reduction
+- Repetition removal
+- Native Telugu flow
+- CTA quality
+- Accuracy
 
 DRAFT PLAN:
 ${plan.text}
@@ -500,12 +557,13 @@ DRAFT VOICEOVER:
 ${voice.text}
 
 Strict voiceover rules:
-- voiceover must be native spoken Telugu style, not formal Telugu.
-- Use Telugu script + English tech words.
-- Do not use Roman Telugu.
+- Native spoken Telugu style.
+- Telugu script + English tech words.
+- No Roman Telugu.
+- No formal Telugu.
 - No repeated sentences.
 - Maximum nine short lines.
-- Include an error/confusion fix moment.
+- Include error/confusion fix moment.
 - No direct digits.
 - Keep expression tags.
 `;
@@ -529,4 +587,4 @@ Strict voiceover rules:
   }
 });
 
-app.listen(PORT, () => console.log(`Multi-model psychology reviewer app running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Multi-model psychology reviewer debug app running on port ${PORT}`));

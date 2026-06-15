@@ -9,8 +9,19 @@ app.use(express.json({ limit: "1mb" }));
 
 const commands = ["pwd","ls","cd","mkdir","touch","cat","cp","mv","rm","chmod","chown","git","curl","wget","grep","find","ps","top","kill","df","du","free","uname","tar","zip/unzip","bash script"];
 
-function getSingleModel() {
-  return process.env.MODEL_ALL || process.env.NIM_MODEL || "minimaxai/minimax-m3";
+function getModelChain() {
+  const raw = process.env.MODEL_CHAIN || [
+    process.env.MODEL_PRIMARY || "minimaxai/minimax-m3",
+    process.env.MODEL_BACKUP_1 || "meta/llama-3.3-70b-instruct",
+    process.env.MODEL_BACKUP_2 || "meta/llama-3.1-70b-instruct",
+    process.env.MODEL_BACKUP_3 || "meta/llama3-70b-instruct"
+  ].filter(Boolean).join(",");
+
+  return raw
+    .split(",")
+    .map(x => x.trim())
+    .filter(Boolean)
+    .filter((x, i, arr) => arr.indexOf(x) === i);
 }
 
 function getTag(text, tag, fallback = "") {
@@ -19,9 +30,7 @@ function getTag(text, tag, fallback = "") {
   return match ? match[1].trim() : fallback;
 }
 
-async function callNvidia(prompt, maxTokens = 1800, temperature = 0.25) {
-  const model = getSingleModel();
-
+async function callOneModel(model, prompt, maxTokens = 1800, temperature = 0.25) {
   const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -45,16 +54,36 @@ async function callNvidia(prompt, maxTokens = 1800, temperature = 0.25) {
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`${model} failed: ${text}`);
+    throw new Error(`${model} failed with HTTP ${response.status}: ${text}`);
   }
 
   const data = await response.json();
   return data?.choices?.[0]?.message?.content || "";
 }
 
-function formatOutput(reviewed) {
-  const model = getSingleModel();
+async function callWithFallback(prompt, maxTokens = 1800, temperature = 0.25) {
+  const modelChain = getModelChain();
+  const errors = [];
 
+  for (const model of modelChain) {
+    try {
+      const text = await callOneModel(model, prompt, maxTokens, temperature);
+      return {
+        text,
+        modelUsed: model,
+        attemptedModels: modelChain,
+        errors
+      };
+    } catch (error) {
+      errors.push(error.message);
+      continue;
+    }
+  }
+
+  throw new Error("All models failed:\n" + errors.join("\n\n"));
+}
+
+function formatOutput(reviewed, modelInfo) {
   const videoTitle = getTag(reviewed, "video_title", "\"Linux Command Tutorial\"");
   const hooks = getTag(reviewed, "hooks", "- Learn this Linux command clearly.\n- Fix beginner confusion.\n- Practice Linux visually.");
   const fullVoiceover = getTag(reviewed, "full_voiceover", "[warm tone]\nఈ రోజు మనం Linux command ని deep గా నేర్చుకుందాం. [pause]");
@@ -75,15 +104,14 @@ function formatOutput(reviewed) {
   const psychologyNotes = getTag(reviewed, "psychology_notes", "- Hook improved for curiosity.\n- Repetition removed.\n- CTA made motivating.");
   const safety = getTag(reviewed, "safety_note", "Always understand a command before running it.");
 
-  return `0. MODEL USED FOR ALL ROLES
-${model}
+  return `0. MODEL USED
+Used model: ${modelInfo.modelUsed}
 
-Roles powered by this one model:
-- Reel planner
-- Deep Linux teacher
-- Native Telugu voiceover writer
-- Viewer psychology reviewer
-- Final correction pass
+Attempted model chain:
+${modelInfo.attemptedModels.map(m => "- " + m).join("\n")}
+
+Fallback notes:
+${modelInfo.errors.length ? modelInfo.errors.map(e => "- " + e).join("\n") : "- Primary model worked. No fallback needed."}
 
 1. VIDEO TITLE
 ${videoTitle}
@@ -148,7 +176,7 @@ const html = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Linux MiniMax M3 Generator</title>
+<title>Linux Auto Fallback Models Generator</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#070b12;color:#f3f7ff;font-family:Arial,"Noto Sans Telugu",sans-serif}
@@ -179,9 +207,9 @@ code{color:#9ed0ff}
 <body>
 <main>
 <section class="hero">
-<p class="badge">Linux Challenge • v18 MiniMax M3 Only</p>
-<h1>One Model For Everything</h1>
-<p class="sub">This version uses <b>minimaxai/minimax-m3</b> for planner, deep learning, voiceover, psychology reviewer, and final correction.</p>
+<p class="badge">Linux Challenge • v19 Auto Fallback Models</p>
+<h1>MiniMax First, Backup Automatically</h1>
+<p class="sub">This version tries MiniMax M3 first. If NVIDIA says DEGRADED or failed, it automatically tries backup models instead of stopping.</p>
 </section>
 
 <section class="grid">
@@ -258,19 +286,19 @@ code{color:#9ed0ff}
 </select>
 
 <label>Extra instruction</label>
-<textarea id="extra" placeholder="Example: Make the voiceover cover every visual step. Teach deeply but keep it beginner friendly."></textarea>
+<textarea id="extra" placeholder="Example: If MiniMax fails, use backup automatically. Teach deeply."></textarea>
 
-<button type="button" class="primary" id="generateBtn">Generate With MiniMax M3</button>
-<button type="button" class="secondary" id="testBtn" style="width:100%;margin-top:10px;">Test API Connection</button>
+<button type="button" class="primary" id="generateBtn">Generate With Auto Fallback</button>
+<button type="button" class="secondary" id="testBtn" style="width:100%;margin-top:10px;">Test Model Chain</button>
 
 <div class="status" id="statusBox">Status: Page loaded. Click Generate.</div>
-<div class="note"><b>Model:</b> Uses MODEL_ALL or NIM_MODEL. Default is <code>minimaxai/minimax-m3</code>.</div>
-<p class="small">Render vars: NVIDIA_API_KEY and MODEL_ALL=minimaxai/minimax-m3.</p>
+<div class="note"><b>Fix:</b> MiniMax degraded error will not stop the app. It will try backup models automatically.</div>
+<p class="small">Render vars: NVIDIA_API_KEY, MODEL_CHAIN or MODEL_PRIMARY/MODEL_BACKUP_1/MODEL_BACKUP_2/MODEL_BACKUP_3.</p>
 </section>
 
 <section class="output">
 <div class="head"><h2>Generated Output</h2><button type="button" class="secondary" id="copyBtn">Copy</button></div>
-<pre id="output">Click Generate. MiniMax M3 output will appear here.</pre>
+<pre id="output">Click Generate. Auto fallback output will appear here.</pre>
 </section>
 </section>
 </main>
@@ -294,16 +322,16 @@ code{color:#9ed0ff}
   });
 
   $("testBtn").addEventListener("click", async ()=>{
-    setStatus("Testing API connection...");
+    setStatus("Testing model chain...");
     setOutput("Testing /api/test ...");
     try{
       const response = await fetch("/api/test");
       const data = await response.json();
       setOutput(JSON.stringify(data, null, 2));
-      setStatus(response.ok ? "API test completed." : "API test returned error.");
+      setStatus(response.ok ? "Model chain test completed." : "Model chain test returned error.");
     }catch(error){
-      setStatus("API test failed: " + error.message);
-      setOutput("API test failed:\\n" + error.stack);
+      setStatus("Test failed: " + error.message);
+      setOutput("Test failed:\\n" + error.stack);
     }
   });
 
@@ -322,8 +350,8 @@ code{color:#9ed0ff}
       extra: $("extra").value.trim()
     };
 
-    setStatus("Generate clicked. Sending request to MiniMax M3...");
-    setOutput("Running MiniMax M3 all-in-one pipeline...\\n\\nPlanning reel style...\\nWriting deep learning guide...\\nWriting full native Telugu voiceover...\\nReviewing retention and psychology...\\n\\nPlease wait.");
+    setStatus("Generate clicked. Trying model chain...");
+    setOutput("Running model chain...\\n\\nTrying primary model first. If it is degraded, backup model will be used automatically.\\n\\nPlease wait.");
 
     try{
       const response = await fetch("/api/generate", {
@@ -372,12 +400,12 @@ app.get("/api/test", (req, res) => {
     ok: true,
     message: "Server and frontend connection working.",
     hasNvidiaKey: Boolean(process.env.NVIDIA_API_KEY),
-    modelUsedForAllRoles: getSingleModel()
+    modelChain: getModelChain()
   });
 });
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, app: "Linux MiniMax M3 All In One", version: "18.0.0" });
+  res.json({ ok: true, app: "Linux Auto Fallback Models", version: "19.0.0" });
 });
 
 app.post("/api/generate", async (req, res) => {
@@ -493,12 +521,16 @@ Psychology review rules:
 - Remove weak/repeated lines.
 `;
 
-    const reviewed = await callNvidia(prompt, 5200, 0.25);
-    const output = formatOutput(reviewed);
+    const result = await callWithFallback(prompt, 5200, 0.25);
+    const output = formatOutput(result.text, {
+      modelUsed: result.modelUsed,
+      attemptedModels: result.attemptedModels,
+      errors: result.errors
+    });
     res.json({ output });
   } catch (error) {
     res.status(500).json({ error: "Server error.", details: error.message });
   }
 });
 
-app.listen(PORT, () => console.log(`MiniMax M3 all-in-one app running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Auto fallback models app running on port ${PORT}`));

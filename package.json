@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v18-minimax-m3-all-in-one",
-  "version": "18.0.0",
-  "description": "Linux reel generator using minimaxai/minimax-m3 for all specialist roles",
+  "name": "linux-render-v19-auto-fallback-models",
+  "version": "19.0.0",
+  "description": "Linux reel generator with MiniMax M3 primary model and automatic fallback models",
   "main": "server.js",
   "type": "module",
   "scripts": {

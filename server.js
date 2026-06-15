@@ -9,20 +9,8 @@ app.use(express.json({ limit: "1mb" }));
 
 const commands = ["pwd","ls","cd","mkdir","touch","cat","cp","mv","rm","chmod","chown","git","curl","wget","grep","find","ps","top","kill","df","du","free","uname","tar","zip/unzip","bash script"];
 
-const DEFAULT_MODELS = {
-  planner: "meta/llama-3.3-70b-instruct",
-  deep: "meta/llama-3.3-70b-instruct",
-  voice: "meta/llama-3.3-70b-instruct",
-  psychology: "meta/llama-3.3-70b-instruct",
-  fallback: "meta/llama-3.3-70b-instruct"
-};
-
-function getModel(role) {
-  if (role === "planner") return process.env.MODEL_PLANNER || process.env.NIM_MODEL || DEFAULT_MODELS.planner;
-  if (role === "deep") return process.env.MODEL_DEEP || process.env.NIM_MODEL || DEFAULT_MODELS.deep;
-  if (role === "voice") return process.env.MODEL_VOICE || process.env.NIM_MODEL || DEFAULT_MODELS.voice;
-  if (role === "psychology") return process.env.MODEL_PSYCHOLOGY || process.env.NIM_MODEL || DEFAULT_MODELS.psychology;
-  return process.env.MODEL_FALLBACK || process.env.NIM_MODEL || DEFAULT_MODELS.fallback;
+function getSingleModel() {
+  return process.env.MODEL_ALL || process.env.NIM_MODEL || "minimaxai/minimax-m3";
 }
 
 function getTag(text, tag, fallback = "") {
@@ -31,7 +19,9 @@ function getTag(text, tag, fallback = "") {
   return match ? match[1].trim() : fallback;
 }
 
-async function callNvidia(model, prompt, maxTokens = 1800, temperature = 0.25) {
+async function callNvidia(prompt, maxTokens = 1800, temperature = 0.25) {
+  const model = getSingleModel();
+
   const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -44,7 +34,7 @@ async function callNvidia(model, prompt, maxTokens = 1800, temperature = 0.25) {
       messages: [
         {
           role: "system",
-          content: "Return tagged content only. No JSON. No markdown fences. Follow tags exactly."
+          content: "Return tagged content only. No JSON. No markdown fences. Follow tags exactly. Be accurate, concise, and avoid repetition."
         },
         { role: "user", content: prompt }
       ],
@@ -62,35 +52,13 @@ async function callNvidia(model, prompt, maxTokens = 1800, temperature = 0.25) {
   return data?.choices?.[0]?.message?.content || "";
 }
 
-async function callSpecialist(role, prompt, maxTokens, temperature) {
-  const specialist = getModel(role);
-  const fallback = getModel("fallback");
-  try {
-    return {
-      text: await callNvidia(specialist, prompt, maxTokens, temperature),
-      model: specialist,
-      fallbackUsed: false
-    };
-  } catch (error) {
-    if (specialist === fallback) throw error;
-    return {
-      text: await callNvidia(fallback, prompt, maxTokens, temperature),
-      model: fallback,
-      fallbackUsed: true
-    };
-  }
-}
-
-function formatOutput(reviewed, modelInfo) {
-  const modelLine = `Planner: ${modelInfo.planner}${modelInfo.plannerFallback ? " (fallback used)" : ""}
-Deep Learning: ${modelInfo.deep}${modelInfo.deepFallback ? " (fallback used)" : ""}
-Full Voiceover: ${modelInfo.voice}${modelInfo.voiceFallback ? " (fallback used)" : ""}
-Psychology Reviewer: ${modelInfo.psychology}${modelInfo.psychologyFallback ? " (fallback used)" : ""}`;
+function formatOutput(reviewed) {
+  const model = getSingleModel();
 
   const videoTitle = getTag(reviewed, "video_title", "\"Linux Command Tutorial\"");
   const hooks = getTag(reviewed, "hooks", "- Learn this Linux command clearly.\n- Fix beginner confusion.\n- Practice Linux visually.");
   const fullVoiceover = getTag(reviewed, "full_voiceover", "[warm tone]\nఈ రోజు మనం Linux command ని deep గా నేర్చుకుందాం. [pause]");
-  const sectionVoiceover = getTag(reviewed, "section_wise_voiceover", "- Hook voiceover\n- Explanation voiceover\n- Demo voiceover\n- Error fix voiceover\n- CTA voiceover");
+  const sectionVoiceover = getTag(reviewed, "section_wise_voiceover", "- Hook voiceover\n- Concept voiceover\n- Demo voiceover\n- Error fix voiceover\n- CTA voiceover");
   const visualStyle = getTag(reviewed, "visual_style", "- Dark black grid background\n- Neon green and white text\n- Terminal recording with zoom");
   const editTimeline = getTag(reviewed, "edit_timeline", "- 0s-3s: Show title\n- 3s-15s: Explain command\n- 15s-35s: Terminal demo and error fix");
   const requirements = getTag(reviewed, "requirements", "- No extra package required.");
@@ -107,8 +75,15 @@ Psychology Reviewer: ${modelInfo.psychology}${modelInfo.psychologyFallback ? " (
   const psychologyNotes = getTag(reviewed, "psychology_notes", "- Hook improved for curiosity.\n- Repetition removed.\n- CTA made motivating.");
   const safety = getTag(reviewed, "safety_note", "Always understand a command before running it.");
 
-  return `0. MODELS USED
-${modelLine}
+  return `0. MODEL USED FOR ALL ROLES
+${model}
+
+Roles powered by this one model:
+- Reel planner
+- Deep Linux teacher
+- Native Telugu voiceover writer
+- Viewer psychology reviewer
+- Final correction pass
 
 1. VIDEO TITLE
 ${videoTitle}
@@ -173,7 +148,7 @@ const html = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Linux Full Voiceover Deep Learning</title>
+<title>Linux MiniMax M3 Generator</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#070b12;color:#f3f7ff;font-family:Arial,"Noto Sans Telugu",sans-serif}
@@ -204,9 +179,9 @@ code{color:#9ed0ff}
 <body>
 <main>
 <section class="hero">
-<p class="badge">Linux Challenge • v17 Full Voiceover + Deep Learning</p>
-<h1>Full Video Voiceover + Deep Learning Guide</h1>
-<p class="sub">This version creates voiceover for the full video, section-wise voiceover, deep command explanation, deep learning guide, mini quiz, practice task, error fix, and psychology review.</p>
+<p class="badge">Linux Challenge • v18 MiniMax M3 Only</p>
+<h1>One Model For Everything</h1>
+<p class="sub">This version uses <b>minimaxai/minimax-m3</b> for planner, deep learning, voiceover, psychology reviewer, and final correction.</p>
 </section>
 
 <section class="grid">
@@ -285,17 +260,17 @@ code{color:#9ed0ff}
 <label>Extra instruction</label>
 <textarea id="extra" placeholder="Example: Make the voiceover cover every visual step. Teach deeply but keep it beginner friendly."></textarea>
 
-<button type="button" class="primary" id="generateBtn">Generate Full Voiceover + Deep Learning</button>
+<button type="button" class="primary" id="generateBtn">Generate With MiniMax M3</button>
 <button type="button" class="secondary" id="testBtn" style="width:100%;margin-top:10px;">Test API Connection</button>
 
 <div class="status" id="statusBox">Status: Page loaded. Click Generate.</div>
-<div class="note"><b>New:</b> Full video voiceover, section-wise voiceover, deep learning guide, mini quiz, and psychology correction.</div>
-<p class="small">Render vars: NVIDIA_API_KEY, MODEL_PLANNER, MODEL_DEEP, MODEL_VOICE, MODEL_PSYCHOLOGY, MODEL_FALLBACK.</p>
+<div class="note"><b>Model:</b> Uses MODEL_ALL or NIM_MODEL. Default is <code>minimaxai/minimax-m3</code>.</div>
+<p class="small">Render vars: NVIDIA_API_KEY and MODEL_ALL=minimaxai/minimax-m3.</p>
 </section>
 
 <section class="output">
 <div class="head"><h2>Generated Output</h2><button type="button" class="secondary" id="copyBtn">Copy</button></div>
-<pre id="output">Click Generate. Full voiceover and deep learning output will appear here.</pre>
+<pre id="output">Click Generate. MiniMax M3 output will appear here.</pre>
 </section>
 </section>
 </main>
@@ -347,8 +322,8 @@ code{color:#9ed0ff}
       extra: $("extra").value.trim()
     };
 
-    setStatus("Generate clicked. Sending request...");
-    setOutput("Running full pipeline...\\n\\nStep one: visual planner\\nStep two: deep learning expert\\nStep three: full Telugu voiceover writer\\nStep four: psychology reviewer and correction\\n\\nPlease wait.");
+    setStatus("Generate clicked. Sending request to MiniMax M3...");
+    setOutput("Running MiniMax M3 all-in-one pipeline...\\n\\nPlanning reel style...\\nWriting deep learning guide...\\nWriting full native Telugu voiceover...\\nReviewing retention and psychology...\\n\\nPlease wait.");
 
     try{
       const response = await fetch("/api/generate", {
@@ -397,18 +372,12 @@ app.get("/api/test", (req, res) => {
     ok: true,
     message: "Server and frontend connection working.",
     hasNvidiaKey: Boolean(process.env.NVIDIA_API_KEY),
-    models: {
-      planner: getModel("planner"),
-      deep: getModel("deep"),
-      voice: getModel("voice"),
-      psychology: getModel("psychology"),
-      fallback: getModel("fallback")
-    }
+    modelUsedForAllRoles: getSingleModel()
   });
 });
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, app: "Linux Full Voiceover Deep Learning", version: "17.0.0" });
+  res.json({ ok: true, app: "Linux MiniMax M3 All In One", version: "18.0.0" });
 });
 
 app.post("/api/generate", async (req, res) => {
@@ -426,115 +395,17 @@ app.post("/api/generate", async (req, res) => {
       return res.status(400).json({ error: "Day number and Linux command/topic are required." });
     }
 
-    const plannerPrompt = `
+    const prompt = `
 Return tagged content only. No JSON. No markdown fences.
 
-Fill only:
-<video_title>...</video_title>
-<hooks>...</hooks>
-<visual_style>...</visual_style>
-<edit_timeline>...</edit_timeline>
-<caption>...</caption>
-<hashtags>...</hashtags>
-<safety_note>...</safety_note>
+You are acting as all specialists together:
+1. Viral short-form tech reel planner
+2. Deep Linux teacher
+3. Native Telugu voiceover writer
+4. Viewer psychology and retention reviewer
+5. Final correction editor
 
-Create a dark-grid Linux reel plan.
-
-Inputs:
-day: ${day}
-command: ${command}
-environment: ${environment}
-visual style: ${visualStyle}
-video length: ${voiceLength}
-extra: ${extra || "No extra instruction"}
-
-Rules:
-- video_title: English only.
-- hooks: exactly three English bullet lines, strong first three seconds.
-- visual_style: dark grid, neon green/white text, dotted arrows, Linux icon, terminal screen recording, zoom on output.
-- edit_timeline: English only, timed visual actions. Cover every step from hook to CTA.
-- caption: native Telugu + English tech words allowed.
-- hashtags: eight to sixteen hashtags.
-- safety_note: English only.
-`;
-
-    const deepPrompt = `
-Return tagged content only. No JSON. No markdown fences.
-
-Fill only:
-<requirements>...</requirements>
-<termux_commands>...</termux_commands>
-<ubuntu_commands>...</ubuntu_commands>
-<main_examples>...</main_examples>
-<deep_explanation>...</deep_explanation>
-<deep_learning_guide>...</deep_learning_guide>
-<errors_fixes>...</errors_fixes>
-<practice_task>...</practice_task>
-<mini_quiz>...</mini_quiz>
-
-Inputs:
-command: ${command}
-environment: ${environment}
-learning depth: ${depth}
-
-Rules:
-- English only.
-- Teach deeply but beginner-friendly.
-- If no package needed, say "- No extra package required."
-- If no install command needed, say "- None required."
-- deep_explanation must include purpose, syntax, how it works, output meaning, flags/options if any, use cases, not-use cases, beginner mistakes, related commands, safe examples, real project use.
-- deep_learning_guide must include: mental model, analogy, step-by-step understanding, memory trick, common misconception, how to practice.
-- errors_fixes must use realistic errors/confusions only.
-- mini_quiz must include three quick questions with answers.
-- For risky commands use safe demo folder only.
-`;
-
-    const voicePrompt = `
-Return tagged content only. No JSON. No markdown fences.
-
-Fill only:
-<full_voiceover>...</full_voiceover>
-<section_wise_voiceover>...</section_wise_voiceover>
-
-Inputs:
-day: ${day}
-command: ${command}
-environment: ${environment}
-video length: ${voiceLength}
-voiceover coverage: ${voiceCoverage}
-error style: ${errorStyle}
-voice style: ${voiceEmotion}
-
-Rules for full_voiceover:
-- Voiceover must cover the full video: hook, command meaning, deep explanation, terminal demo, output meaning, error/confusion fix, practice task, mini quiz style question, CTA.
-- Telugu script + natural English tech words.
-- Native Telugu creator style, not textbook Telugu.
-- Do not use Roman Telugu.
-- Do not use full formal Telugu.
-- Use command, terminal, folder, path, output, error, fix, install, package, type, Enter, work.
-- Avoid ఆదేశం, సంచయం, దోషం, కార్యనిర్వహణ.
-- No repeated sentence or idea.
-- Use [soft background music], [warm tone], [short pause], [pause], [surprised], [calm tone], [confident], [motivational tone].
-- No direct digits in spoken lines.
-- Commands stay exact, for example \`${command}\`.
-- Include an error/confusion fix moment.
-- End with a short motivational follow CTA.
-
-Rules for section_wise_voiceover:
-- Make separate bullet lines for Hook voiceover, Concept voiceover, Terminal demo voiceover, Error fix voiceover, Practice voiceover, CTA voiceover.
-- Telugu script + English tech words.
-`;
-
-    const plan = await callSpecialist("planner", plannerPrompt, 1500, 0.25);
-    const deep = await callSpecialist("deep", deepPrompt, 2600, 0.18);
-    const voice = await callSpecialist("voice", voicePrompt, 2200, 0.32);
-
-    const reviewerPrompt = `
-Return tagged content only. No JSON. No markdown fences.
-
-You are a viewer psychology, attention, retention, beginner-learning, and trust reviewer for short-form tech videos.
-
-Return ALL final tags:
+Return ALL tags:
 <video_title>...</video_title>
 <hooks>...</hooks>
 <full_voiceover>...</full_voiceover>
@@ -555,61 +426,79 @@ Return ALL final tags:
 <psychology_notes>...</psychology_notes>
 <safety_note>...</safety_note>
 
-Review focus: ${psychologyFocus}
-Command: ${command}
-Environment: ${environment}
-Extra: ${extra || "No extra instruction"}
+Inputs:
+day: ${day}
+command: ${command}
+environment: ${environment}
+visual style: ${visualStyle}
+learning depth: ${depth}
+video length: ${voiceLength}
+voiceover coverage: ${voiceCoverage}
+error style: ${errorStyle}
+native Telugu style: ${voiceEmotion}
+psychology review focus: ${psychologyFocus}
+extra: ${extra || "No extra instruction"}
 
-Improve:
-- Hook strength
-- Full voiceover coverage
-- Deep learning clarity
-- Beginner confidence
-- Curiosity and retention
-- Error anxiety reduction
-- Repetition removal
-- Native Telugu flow
-- CTA quality
-- Accuracy
+Global rules:
+- No JSON.
+- No markdown fences.
+- Use exact tags.
+- Do not add extra text outside tags.
+- Avoid repetition.
+- Be accurate.
+- Make content beginner-friendly.
 
-DRAFT PLAN:
-${plan.text}
+Video planning rules:
+- video_title: English only.
+- hooks: exactly three English bullet lines.
+- visual_style: dark grid, neon green/white text, dotted arrows, Linux icon, terminal screen recording, zoom on output.
+- edit_timeline: English only, timed visual actions from hook to CTA.
+- Do not copy watermark, exact music, or original assets.
 
-DRAFT DEEP LEARNING:
-${deep.text}
-
-DRAFT VOICEOVER:
-${voice.text}
-
-Strict:
-- Voiceover must be native spoken Telugu style.
-- Telugu script + English tech words.
-- No Roman Telugu.
-- No formal Telugu.
-- No repeated sentences.
-- Include error/confusion fix moment.
+Voiceover rules:
+- full_voiceover must cover the full video: hook, command meaning, deep concept, terminal demo, output meaning, error/confusion fix, practice task, mini quiz style question, CTA.
+- Telugu script + natural English tech words.
+- Native Telugu creator style, not textbook Telugu.
+- Do not use Roman Telugu.
+- Do not use full formal Telugu.
+- Use command, terminal, folder, path, output, error, fix, install, package, type, Enter, work.
+- Avoid formal words like ఆదేశం, సంచయం, దోషం, కార్యనిర్వహణ.
+- No repeated sentence or idea.
+- Use [soft background music], [warm tone], [short pause], [pause], [surprised], [calm tone], [confident], [motivational tone].
 - No direct digits in spoken lines.
-- Keep expression tags.
-- Deep explanation and deep learning guide must be English only.
+- Commands stay exact, for example \`${command}\`.
+- Include an error/confusion fix moment.
+- End with a short motivational follow CTA.
+
+Section-wise voiceover:
+- Make separate bullet lines for Hook, Concept, Terminal demo, Output, Error fix, Practice, CTA.
+- Telugu script + English tech words.
+
+Deep learning rules:
+- English only for deep_explanation and deep_learning_guide.
+- deep_explanation must include purpose, syntax, how it works, output meaning, flags/options if any, use cases, not-use cases, beginner mistakes, related commands, safe examples, real project use.
+- deep_learning_guide must include mental model, analogy, step-by-step understanding, memory trick, common misconception, how to practice.
+- mini_quiz must include three quick questions with answers.
+- errors_fixes must use realistic errors/confusions only.
+- If no package needed, say "- No extra package required."
+- If no install command needed, say "- None required."
+- For risky commands use safe demo folder only.
+
+Psychology review rules:
+- Improve first three seconds.
+- Improve curiosity and retention.
+- Reduce beginner fear.
+- Make error fix feel calm and simple.
+- Make CTA natural.
+- Remove weak/repeated lines.
 `;
 
-    const review = await callSpecialist("psychology", reviewerPrompt, 4200, 0.22);
-
-    const output = formatOutput(review.text, {
-      planner: plan.model,
-      plannerFallback: plan.fallbackUsed,
-      deep: deep.model,
-      deepFallback: deep.fallbackUsed,
-      voice: voice.model,
-      voiceFallback: voice.fallbackUsed,
-      psychology: review.model,
-      psychologyFallback: review.fallbackUsed
-    });
-
+    const reviewed = await callNvidia(prompt, 5200, 0.25);
+    const output = formatOutput(reviewed);
     res.json({ output });
   } catch (error) {
     res.status(500).json({ error: "Server error.", details: error.message });
   }
 });
 
-app.listen(PORT, () => console.log(`Full voiceover deep learning app running on port ${PORT}`));
+app.listen(PORT, () => console.log(`MiniMax M3 all-in-one app running on port ${PORT}`));

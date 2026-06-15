@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v17-full-voiceover-deep-learning",
-  "version": "17.0.0",
-  "description": "Linux reel generator with full-video native Telugu voiceover and deep learning guide",
+  "name": "linux-render-v18-minimax-m3-all-in-one",
+  "version": "18.0.0",
+  "description": "Linux reel generator using minimaxai/minimax-m3 for all specialist roles",
   "main": "server.js",
   "type": "module",
   "scripts": {

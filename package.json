@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v7-number-words-telugu-voiceover",
-  "version": "7.0.0",
-  "description": "Linux 90 Days generator with all-in-one Telugu voiceover and number words",
+  "name": "linux-render-v8-deep-command-voiceover",
+  "version": "8.0.0",
+  "description": "Deep Linux command explanation plus Telugu all-in-one voiceover",
   "main": "server.js",
   "type": "module",
   "scripts": {

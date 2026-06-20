@@ -5,178 +5,152 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 10000;
+
 app.use(express.json({ limit: "1mb" }));
 
-const commands = ["pwd","ls","cd","mkdir","touch","cat","cp","mv","rm","chmod","chown","git","curl","wget","grep","find","ps","top","kill","df","du","free","uname","tar","zip/unzip","bash script"];
+const commands = [
+  "pwd","ls","cd","mkdir","touch","cat","cp","mv","rm","chmod",
+  "chown","git","curl","wget","grep","find","ps","top","kill",
+  "df","du","free","uname","tar","zip/unzip","bash script"
+];
 
-function getModelChain() {
-  const raw = process.env.MODEL_CHAIN || [
-    process.env.MODEL_PRIMARY || "minimaxai/minimax-m3",
-    process.env.MODEL_BACKUP_1 || "meta/llama-3.3-70b-instruct",
-    process.env.MODEL_BACKUP_2 || "meta/llama-3.1-70b-instruct",
-    process.env.MODEL_BACKUP_3 || "meta/llama3-70b-instruct"
-  ].filter(Boolean).join(",");
-
-  return raw
-    .split(",")
-    .map(x => x.trim())
-    .filter(Boolean)
-    .filter((x, i, arr) => arr.indexOf(x) === i);
+function getModel() {
+  return process.env.MODEL_ALL ||
+         process.env.NIM_MODEL ||
+         "meta/llama-3.3-70b-instruct";
 }
 
 function getTag(text, tag, fallback = "") {
-  const re = new RegExp(`<${tag}>\\s*([\\s\\S]*?)\\s*</${tag}>`, "i");
-  const match = text.match(re);
+  const regex = new RegExp(`<${tag}>\\s*([\\s\\S]*?)\\s*</${tag}>`, "i");
+  const match = text.match(regex);
   return match ? match[1].trim() : fallback;
 }
 
-async function callOneModel(model, prompt, maxTokens = 1800, temperature = 0.25) {
-  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${process.env.NVIDIA_API_KEY}`,
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        {
-          role: "system",
-          content: "Return tagged content only. No JSON. No markdown fences. Follow tags exactly. Be accurate, concise, and avoid repetition."
-        },
-        { role: "user", content: prompt }
-      ],
-      max_tokens: maxTokens,
-      temperature
-    })
-  });
+async function callModel(prompt, maxTokens = 5200, temperature = 0.24) {
+  const model = getModel();
+
+  const response = await fetch(
+    "https://integrate.api.nvidia.com/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.NVIDIA_API_KEY}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Return tagged content only. Do not return JSON. Do not use markdown fences. " +
+              "Follow every requested tag. Be accurate, natural, non-repetitive, and beginner-friendly."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: maxTokens,
+        temperature
+      })
+    }
+  );
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`${model} failed with HTTP ${response.status}: ${text}`);
+    const details = await response.text();
+    throw new Error(`${model} failed with HTTP ${response.status}: ${details}`);
   }
 
   const data = await response.json();
-  return data?.choices?.[0]?.message?.content || "";
-}
+  const content = data?.choices?.[0]?.message?.content;
 
-async function callWithFallback(prompt, maxTokens = 1800, temperature = 0.25) {
-  const modelChain = getModelChain();
-  const errors = [];
-
-  for (const model of modelChain) {
-    try {
-      const text = await callOneModel(model, prompt, maxTokens, temperature);
-      return {
-        text,
-        modelUsed: model,
-        attemptedModels: modelChain,
-        errors
-      };
-    } catch (error) {
-      errors.push(error.message);
-      continue;
-    }
+  if (!content || !content.trim()) {
+    throw new Error(`${model} returned an empty response.`);
   }
 
-  throw new Error("All models failed:\n" + errors.join("\n\n"));
+  return content;
 }
 
-function formatOutput(reviewed, modelInfo) {
-  const videoTitle = getTag(reviewed, "video_title", "\"Linux Command Tutorial\"");
-  const hooks = getTag(reviewed, "hooks", "- Learn this Linux command clearly.\n- Fix beginner confusion.\n- Practice Linux visually.");
-  const fullVoiceover = getTag(reviewed, "full_voiceover", "[warm tone]\nఈ రోజు మనం Linux command ని deep గా నేర్చుకుందాం. [pause]");
-  const sectionVoiceover = getTag(reviewed, "section_wise_voiceover", "- Hook voiceover\n- Concept voiceover\n- Demo voiceover\n- Error fix voiceover\n- CTA voiceover");
-  const visualStyle = getTag(reviewed, "visual_style", "- Dark black grid background\n- Neon green and white text\n- Terminal recording with zoom");
-  const editTimeline = getTag(reviewed, "edit_timeline", "- 0s-3s: Show title\n- 3s-15s: Explain command\n- 15s-35s: Terminal demo and error fix");
-  const requirements = getTag(reviewed, "requirements", "- No extra package required.");
-  const termux = getTag(reviewed, "termux_commands", "- None required.");
-  const ubuntu = getTag(reviewed, "ubuntu_commands", "- None required.");
-  const examples = getTag(reviewed, "main_examples", "- command");
-  const explanation = getTag(reviewed, "deep_explanation", "Command purpose, syntax, output meaning, use cases, mistakes, and safe examples.");
-  const deepLearningGuide = getTag(reviewed, "deep_learning_guide", "- Meaning\n- Mental model\n- Real examples\n- Mistakes\n- Practice");
-  const errors = getTag(reviewed, "errors_fixes", "- No common installation error for this command.");
-  const practice = getTag(reviewed, "practice_task", "- Try the command in Termux.\n- Observe the output carefully.");
-  const quiz = getTag(reviewed, "mini_quiz", "- What does this command show?\n- When should you use it?");
-  const caption = getTag(reviewed, "caption", "Linux basics challenge. Learn one command with real practice.");
-  const hashtags = getTag(reviewed, "hashtags", "#Linux #Termux #LinuxForBeginners");
-  const psychologyNotes = getTag(reviewed, "psychology_notes", "- Hook improved for curiosity.\n- Repetition removed.\n- CTA made motivating.");
-  const safety = getTag(reviewed, "safety_note", "Always understand a command before running it.");
+function formatOutput(raw) {
+  const model = getModel();
 
-  return `0. MODEL USED
-Used model: ${modelInfo.modelUsed}
+  return `0. MODEL USED FOR EVERYTHING
+${model}
 
-Attempted model chain:
-${modelInfo.attemptedModels.map(m => "- " + m).join("\n")}
-
-Fallback notes:
-${modelInfo.errors.length ? modelInfo.errors.map(e => "- " + e).join("\n") : "- Primary model worked. No fallback needed."}
+This one model performs:
+- Reel planning
+- Deep Linux teaching
+- Full native Telugu voiceover writing
+- Error and fix explanation
+- Viewer psychology review
+- Final correction
 
 1. VIDEO TITLE
-${videoTitle}
+${getTag(raw, "video_title", "\"Linux Command Tutorial\"")}
 
 2. 3 HOOK OPTIONS
-${hooks}
+${getTag(raw, "hooks", "- Learn this command clearly.\n- Avoid beginner confusion.\n- Practice Linux visually.")}
 
 3. FULL VIDEO VOICEOVER SCRIPT
-${fullVoiceover}
+${getTag(raw, "full_voiceover", "[warm tone]\nఈ రోజు మనం Linux command ని clear గా నేర్చుకుందాం. [pause]")}
 
 4. SECTION-WISE VOICEOVER BREAKDOWN
-${sectionVoiceover}
+${getTag(raw, "section_wise_voiceover", "- Hook\n- Concept\n- Terminal demo\n- Error fix\n- Practice\n- CTA")}
 
 5. REFERENCE REEL VISUAL STYLE
-${visualStyle}
+${getTag(raw, "visual_style", "- Dark grid background\n- Neon green and white text\n- Terminal recording with zoom")}
 
 6. REFERENCE STYLE EDIT TIMELINE
-${editTimeline}
+${getTag(raw, "edit_timeline", "- 0s-3s: Hook\n- 3s-20s: Explanation\n- 20s-45s: Demo and fix\n- End: CTA")}
 
 7. REQUIREMENTS
-${requirements}
+${getTag(raw, "requirements", "- No extra package required.")}
 
 8. TERMUX INSTALL COMMANDS
-${termux}
+${getTag(raw, "termux_commands", "- None required.")}
 
 9. UBUNTU/DEBIAN INSTALL COMMANDS
-${ubuntu}
+${getTag(raw, "ubuntu_commands", "- None required.")}
 
 10. MAIN COMMAND EXAMPLES
-${examples}
+${getTag(raw, "main_examples", "- command")}
 
 11. DEEP COMMAND EXPLANATION
-${explanation}
+${getTag(raw, "deep_explanation", "Purpose, syntax, output, use cases, mistakes, and safe examples.")}
 
 12. DEEP LEARNING GUIDE
-${deepLearningGuide}
+${getTag(raw, "deep_learning_guide", "- Mental model\n- Analogy\n- Memory trick\n- Practice method")}
 
 13. COMMON ERRORS AND FIXES
-${errors}
+${getTag(raw, "errors_fixes", "- No common installation error for this command.")}
 
 14. PRACTICE TASK
-${practice}
+${getTag(raw, "practice_task", "- Run the command.\n- Observe the output.\n- Explain what it means.")}
 
 15. MINI QUIZ FOR VIEWERS
-${quiz}
+${getTag(raw, "mini_quiz", "- Question: What does this command do?\n  Answer: Review the explanation above.")}
 
 16. INSTAGRAM CAPTION
-${caption}
+${getTag(raw, "caption", "Linux basics challenge — learn one command through real practice.")}
 
 17. HASHTAGS
-${hashtags}
+${getTag(raw, "hashtags", "#Linux #Termux #LinuxForBeginners")}
 
 18. PSYCHOLOGY REVIEW NOTES
-${psychologyNotes}
+${getTag(raw, "psychology_notes", "- Hook improved\n- Repetition removed\n- Beginner confidence supported\n- CTA made natural")}
 
 19. SAFETY NOTE
-${safety}`;
+${getTag(raw, "safety_note", "Understand every command before running it.")}`;
 }
 
 const html = `<!DOCTYPE html>
 <html lang="te">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Linux Auto Fallback Models Generator</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux Single Model Generator</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#070b12;color:#f3f7ff;font-family:Arial,"Noto Sans Telugu",sans-serif}
@@ -193,7 +167,8 @@ input,select,textarea{width:100%;padding:13px 14px;border:1px solid #35455d;bord
 textarea{min-height:98px;resize:vertical}
 button{border:0;padding:13px 16px;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer}
 .primary{width:100%;margin-top:16px;background:linear-gradient(135deg,#40a6ff,#7c5cff);color:#06111f}
-.secondary{background:#1b2638;color:#dceaff;border:1px solid #33425a}
+.secondary{width:100%;margin-top:10px;background:#1b2638;color:#dceaff;border:1px solid #33425a}
+.copy{width:auto;margin:0}
 pre{white-space:pre-wrap;word-wrap:break-word;line-height:1.72;color:#e9f1ff;background:#050912;padding:16px;border-radius:14px;border:1px solid #202d40;min-height:740px;overflow-x:auto;font-size:15px;font-family:Arial,"Noto Sans Telugu",sans-serif}
 .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .pill{border:1px solid #30425d;background:#111c2e;color:#d7e7ff;border-radius:999px;padding:8px 10px;font-size:13px;cursor:pointer}
@@ -207,18 +182,18 @@ code{color:#9ed0ff}
 <body>
 <main>
 <section class="hero">
-<p class="badge">Linux Challenge • v19 Auto Fallback Models</p>
-<h1>MiniMax First, Backup Automatically</h1>
-<p class="sub">This version tries MiniMax M3 first. If NVIDIA says DEGRADED or failed, it automatically tries backup models instead of stopping.</p>
+<p class="badge">Linux Challenge • v20 Single Model</p>
+<h1>One Stable Model for Everything</h1>
+<p class="sub">Uses only <b>meta/llama-3.3-70b-instruct</b> for the reel plan, deep Linux explanation, full native Telugu voiceover, psychology review, and final correction.</p>
 </section>
 
 <section class="grid">
 <section class="card">
 <label>Day number</label>
-<input id="day" value="1"/>
+<input id="day" value="1">
 
 <label>Linux command or topic</label>
-<input id="command" value="pwd" placeholder="pwd, ls, cd, git, curl..."/>
+<input id="command" value="pwd" placeholder="pwd, ls, cd, git, curl...">
 
 <div class="pills" id="pills"></div>
 
@@ -277,7 +252,7 @@ code{color:#9ed0ff}
 <option>Fast Instagram Telugu tech style</option>
 </select>
 
-<label>Psychology review focus</label>
+<label>Psychology focus</label>
 <select id="psychologyFocus">
 <option>Retention + curiosity + clarity</option>
 <option>Beginner confidence + motivation</option>
@@ -286,19 +261,22 @@ code{color:#9ed0ff}
 </select>
 
 <label>Extra instruction</label>
-<textarea id="extra" placeholder="Example: If MiniMax fails, use backup automatically. Teach deeply."></textarea>
+<textarea id="extra" placeholder="Example: Teach deeply, cover every visual step, and avoid repeated lines."></textarea>
 
-<button type="button" class="primary" id="generateBtn">Generate With Auto Fallback</button>
-<button type="button" class="secondary" id="testBtn" style="width:100%;margin-top:10px;">Test Model Chain</button>
+<button type="button" class="primary" id="generateBtn">Generate With One Model</button>
+<button type="button" class="secondary" id="testBtn">Test Single Model Setup</button>
 
-<div class="status" id="statusBox">Status: Page loaded. Click Generate.</div>
-<div class="note"><b>Fix:</b> MiniMax degraded error will not stop the app. It will try backup models automatically.</div>
-<p class="small">Render vars: NVIDIA_API_KEY, MODEL_CHAIN or MODEL_PRIMARY/MODEL_BACKUP_1/MODEL_BACKUP_2/MODEL_BACKUP_3.</p>
+<div class="status" id="statusBox">Status: Page loaded. Click Test or Generate.</div>
+<div class="note"><b>No fallback chain:</b> This app calls only one model.</div>
+<p class="small">Render: NVIDIA_API_KEY and MODEL_ALL=meta/llama-3.3-70b-instruct</p>
 </section>
 
 <section class="output">
-<div class="head"><h2>Generated Output</h2><button type="button" class="secondary" id="copyBtn">Copy</button></div>
-<pre id="output">Click Generate. Auto fallback output will appear here.</pre>
+<div class="head">
+<h2>Generated Output</h2>
+<button type="button" class="secondary copy" id="copyBtn">Copy</button>
+</div>
+<pre id="output">Click Generate. Your full single-model output will appear here.</pre>
 </section>
 </section>
 </main>
@@ -307,35 +285,43 @@ code{color:#9ed0ff}
 (function(){
   const commands = ${JSON.stringify(commands)};
   const $ = id => document.getElementById(id);
-  const statusBox = $("statusBox");
   const output = $("output");
+  const status = $("statusBox");
 
-  function setStatus(msg){ statusBox.textContent = "Status: " + msg; }
-  function setOutput(msg){ output.textContent = msg; }
+  function setStatus(message){
+    status.textContent = "Status: " + message;
+  }
 
-  commands.forEach(cmd=>{
-    const span=document.createElement("span");
-    span.className="pill";
-    span.textContent=cmd;
-    span.onclick=()=>{$("command").value=cmd};
-    $("pills").appendChild(span);
+  function setOutput(message){
+    output.textContent = message;
+  }
+
+  commands.forEach(command => {
+    const button = document.createElement("span");
+    button.className = "pill";
+    button.textContent = command;
+    button.addEventListener("click", () => {
+      $("command").value = command;
+    });
+    $("pills").appendChild(button);
   });
 
-  $("testBtn").addEventListener("click", async ()=>{
-    setStatus("Testing model chain...");
+  $("testBtn").addEventListener("click", async () => {
+    setStatus("Testing server and single model configuration...");
     setOutput("Testing /api/test ...");
-    try{
+
+    try {
       const response = await fetch("/api/test");
       const data = await response.json();
       setOutput(JSON.stringify(data, null, 2));
-      setStatus(response.ok ? "Model chain test completed." : "Model chain test returned error.");
-    }catch(error){
-      setStatus("Test failed: " + error.message);
+      setStatus(response.ok ? "Single model setup is connected." : "Test returned an error.");
+    } catch (error) {
       setOutput("Test failed:\\n" + error.stack);
+      setStatus("Test failed: " + error.message);
     }
   });
 
-  $("generateBtn").addEventListener("click", async ()=>{
+  $("generateBtn").addEventListener("click", async () => {
     const payload = {
       day: $("day").value.trim(),
       command: $("command").value.trim(),
@@ -350,187 +336,107 @@ code{color:#9ed0ff}
       extra: $("extra").value.trim()
     };
 
-    setStatus("Generate clicked. Trying model chain...");
-    setOutput("Running model chain...\\n\\nTrying primary model first. If it is degraded, backup model will be used automatically.\\n\\nPlease wait.");
+    setStatus("Sending one request to the selected model...");
+    setOutput(
+      "Generating with one model...\\n\\n" +
+      "Creating reel plan...\\n" +
+      "Writing deep explanation...\\n" +
+      "Writing full native Telugu voiceover...\\n" +
+      "Checking viewer psychology and repetition...\\n\\n" +
+      "Please wait."
+    );
 
-    try{
+    try {
       const response = await fetch("/api/generate", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(payload)
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
       });
-      setStatus("Server responded. Reading output...");
+
       const data = await response.json();
 
-      if(!response.ok){
+      if (!response.ok) {
+        setOutput(
+          "Error:\\n" + (data.error || "Request failed") +
+          "\\n\\nDetails:\\n" + (data.details || "")
+        );
         setStatus("Generation failed.");
-        setOutput("Error:\\n" + (data.error || "Request failed") + "\\n\\nDetails:\\n" + (data.details || ""));
         return;
       }
 
-      setOutput(data.output || "No output returned from server.");
+      setOutput(data.output || "No output returned.");
       setStatus("Generation completed.");
-    }catch(error){
-      setStatus("Browser request failed: " + error.message);
+    } catch (error) {
       setOutput("Browser request failed:\\n" + error.stack);
+      setStatus("Browser request failed: " + error.message);
     }
   });
 
-  $("copyBtn").addEventListener("click", async ()=>{
-    try{
+  $("copyBtn").addEventListener("click", async () => {
+    try {
       await navigator.clipboard.writeText(output.textContent);
-      setStatus("Copied output.");
-      $("copyBtn").textContent="Copied";
-      setTimeout(()=>$("copyBtn").textContent="Copy",1200);
-    }catch(error){
+      $("copyBtn").textContent = "Copied";
+      setStatus("Output copied.");
+      setTimeout(() => $("copyBtn").textContent = "Copy", 1200);
+    } catch (error) {
       setStatus("Copy failed: " + error.message);
     }
   });
 
-  setStatus("JavaScript loaded successfully. Buttons are ready.");
+  setStatus("JavaScript loaded. Single-model buttons are ready.");
 })();
 </script>
 </body>
 </html>`;
 
-app.get("/", (req, res) => res.type("html").send(html));
+app.get("/", (req, res) => {
+  res.type("html").send(html);
+});
+
+app.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    app: "Linux Single Llama Model Generator",
+    version: "20.0.0"
+  });
+});
 
 app.get("/api/test", (req, res) => {
   res.json({
     ok: true,
     message: "Server and frontend connection working.",
     hasNvidiaKey: Boolean(process.env.NVIDIA_API_KEY),
-    modelChain: getModelChain()
+    singleModel: getModel(),
+    fallbackEnabled: false
   });
-});
-
-app.get("/health", (req, res) => {
-  res.json({ ok: true, app: "Linux Auto Fallback Models", version: "19.0.0" });
 });
 
 app.post("/api/generate", async (req, res) => {
   try {
-    const { day, command, environment, visualStyle, depth, voiceLength, voiceCoverage, errorStyle, voiceEmotion, psychologyFocus, extra } = req.body;
+    const {
+      day,
+      command,
+      environment,
+      visualStyle,
+      depth,
+      voiceLength,
+      voiceCoverage,
+      errorStyle,
+      voiceEmotion,
+      psychologyFocus,
+      extra
+    } = req.body;
 
     if (!process.env.NVIDIA_API_KEY) {
       return res.status(500).json({
         error: "NVIDIA_API_KEY is missing.",
-        details: "Open Render > your Web Service > Environment > Add NVIDIA_API_KEY. Then redeploy."
+        details:
+          "Open Render > your Web Service > Environment. Add NVIDIA_API_KEY, save, and redeploy."
       });
     }
 
     if (!day || !command) {
-      return res.status(400).json({ error: "Day number and Linux command/topic are required." });
+      return res.status(400).json({
+        error: "Day number and Linux command/topic are required."
+      });
     }
-
-    const prompt = `
-Return tagged content only. No JSON. No markdown fences.
-
-You are acting as all specialists together:
-1. Viral short-form tech reel planner
-2. Deep Linux teacher
-3. Native Telugu voiceover writer
-4. Viewer psychology and retention reviewer
-5. Final correction editor
-
-Return ALL tags:
-<video_title>...</video_title>
-<hooks>...</hooks>
-<full_voiceover>...</full_voiceover>
-<section_wise_voiceover>...</section_wise_voiceover>
-<visual_style>...</visual_style>
-<edit_timeline>...</edit_timeline>
-<requirements>...</requirements>
-<termux_commands>...</termux_commands>
-<ubuntu_commands>...</ubuntu_commands>
-<main_examples>...</main_examples>
-<deep_explanation>...</deep_explanation>
-<deep_learning_guide>...</deep_learning_guide>
-<errors_fixes>...</errors_fixes>
-<practice_task>...</practice_task>
-<mini_quiz>...</mini_quiz>
-<caption>...</caption>
-<hashtags>...</hashtags>
-<psychology_notes>...</psychology_notes>
-<safety_note>...</safety_note>
-
-Inputs:
-day: ${day}
-command: ${command}
-environment: ${environment}
-visual style: ${visualStyle}
-learning depth: ${depth}
-video length: ${voiceLength}
-voiceover coverage: ${voiceCoverage}
-error style: ${errorStyle}
-native Telugu style: ${voiceEmotion}
-psychology review focus: ${psychologyFocus}
-extra: ${extra || "No extra instruction"}
-
-Global rules:
-- No JSON.
-- No markdown fences.
-- Use exact tags.
-- Do not add extra text outside tags.
-- Avoid repetition.
-- Be accurate.
-- Make content beginner-friendly.
-
-Video planning rules:
-- video_title: English only.
-- hooks: exactly three English bullet lines.
-- visual_style: dark grid, neon green/white text, dotted arrows, Linux icon, terminal screen recording, zoom on output.
-- edit_timeline: English only, timed visual actions from hook to CTA.
-- Do not copy watermark, exact music, or original assets.
-
-Voiceover rules:
-- full_voiceover must cover the full video: hook, command meaning, deep concept, terminal demo, output meaning, error/confusion fix, practice task, mini quiz style question, CTA.
-- Telugu script + natural English tech words.
-- Native Telugu creator style, not textbook Telugu.
-- Do not use Roman Telugu.
-- Do not use full formal Telugu.
-- Use command, terminal, folder, path, output, error, fix, install, package, type, Enter, work.
-- Avoid formal words like ఆదేశం, సంచయం, దోషం, కార్యనిర్వహణ.
-- No repeated sentence or idea.
-- Use [soft background music], [warm tone], [short pause], [pause], [surprised], [calm tone], [confident], [motivational tone].
-- No direct digits in spoken lines.
-- Commands stay exact, for example \`${command}\`.
-- Include an error/confusion fix moment.
-- End with a short motivational follow CTA.
-
-Section-wise voiceover:
-- Make separate bullet lines for Hook, Concept, Terminal demo, Output, Error fix, Practice, CTA.
-- Telugu script + English tech words.
-
-Deep learning rules:
-- English only for deep_explanation and deep_learning_guide.
-- deep_explanation must include purpose, syntax, how it works, output meaning, flags/options if any, use cases, not-use cases, beginner mistakes, related commands, safe examples, real project use.
-- deep_learning_guide must include mental model, analogy, step-by-step understanding, memory trick, common misconception, how to practice.
-- mini_quiz must include three quick questions with answers.
-- errors_fixes must use realistic errors/confusions only.
-- If no package needed, say "- No extra package required."
-- If no install command needed, say "- None required."
-- For risky commands use safe demo folder only.
-
-Psychology review rules:
-- Improve first three seconds.
-- Improve curiosity and retention.
-- Reduce beginner fear.
-- Make error fix feel calm and simple.
-- Make CTA natural.
-- Remove weak/repeated lines.
-`;
-
-    const result = await callWithFallback(prompt, 5200, 0.25);
-    const output = formatOutput(result.text, {
-      modelUsed: result.modelUsed,
-      attemptedModels: result.attemptedModels,
-      errors: result.errors
-    });
-    res.json({ output });
-  } catch (error) {
-    res.status(500).json({ error: "Server error.", details: error.message });
-  }
-});
-
-app.listen(PORT, () => console.log(`Auto fallback models app running on port ${PORT}`));

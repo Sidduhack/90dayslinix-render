@@ -401,7 +401,7 @@ code{color:#9ed0ff}
         audioSource = data.audioUrl;
       } else if (data.audioBase64) {
         const mime = data.audioMimeType || "audio/mpeg";
-        audioSource = `data:${mime};base64,${data.audioBase64}`;
+        audioSource = "data:" + mime + ";base64," + data.audioBase64;
       }
 
       if (audioSource) {

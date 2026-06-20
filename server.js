@@ -180,7 +180,7 @@ code{color:#9ed0ff}
 <main>
 <section class="hero">
 <p class="badge">Linux Challenge • v20 Single Model</p>
-<h1>One Model For Everything</h1>
+<h1>Realistic Step-by-Step Guide Voiceover</h1>
 <p class="sub">This version uses <b>meta/llama-3.3-70b-instruct</b> for planner, deep learning, voiceover, psychology reviewer, and final correction.</p>
 </section>
 
@@ -323,7 +323,7 @@ code{color:#9ed0ff}
     };
 
     setStatus("Generate clicked. Sending request to the single model...");
-    setOutput("Running the single-model all-in-one pipeline...\\n\\nPlanning reel style...\\nWriting deep learning guide...\\nWriting full native Telugu voiceover...\\nReviewing retention and psychology...\\n\\nPlease wait.");
+    setOutput("Running the single-model all-in-one pipeline...\\n\\nPlanning reel style...\\nWriting deep learning guide...\\nWriting realistic step-by-step Termux guide voiceover...\\nChecking technical accuracy, natural flow, and viewer confidence...\\n\\nPlease wait.");
 
     try{
       const response = await fetch("/api/generate", {
@@ -377,7 +377,7 @@ app.get("/api/test", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, app: "Linux Single Model All In One", version: "18.0.0" });
+  res.json({ ok: true, app: "Linux Realistic Guide Voiceover", version: "21.0.0" });
 });
 
 app.post("/api/generate", async (req, res) => {
@@ -455,24 +455,97 @@ Video planning rules:
 - edit_timeline: English only, timed visual actions from hook to CTA.
 - Do not copy watermark, exact music, or original assets.
 
-Voiceover rules:
-- full_voiceover must cover the full video: hook, command meaning, deep concept, terminal demo, output meaning, error/confusion fix, practice task, mini quiz style question, CTA.
-- Telugu script + natural English tech words.
-- Native Telugu creator style, not textbook Telugu.
-- Do not use Roman Telugu.
-- Do not use full formal Telugu.
-- Use command, terminal, folder, path, output, error, fix, install, package, type, Enter, work.
-- Avoid formal words like ఆదేశం, సంచయం, దోషం, కార్యనిర్వహణ.
-- No repeated sentence or idea.
-- Use [soft background music], [warm tone], [short pause], [pause], [surprised], [calm tone], [confident], [motivational tone].
-- No direct digits in spoken lines.
-- Commands stay exact, for example \`${command}\`.
-- Include an error/confusion fix moment.
-- End with a short motivational follow CTA.
+VOICEOVER RULES — REALISTIC GUIDER FLOW
 
-Section-wise voiceover:
-- Make separate bullet lines for Hook, Concept, Terminal demo, Output, Error fix, Practice, CTA.
-- Telugu script + English tech words.
+The full_voiceover must sound like a real instructor guiding a beginner live inside Termux.
+
+Use this exact teaching order:
+
+1. OPEN TERMUX
+- Start naturally by asking the viewer to open Termux.
+- Do not describe obvious screen details.
+- Guide the next action directly.
+
+2. CHECK REQUIREMENTS FIRST
+- Before running the main command, explain whether it is built into the shell or needs a package.
+- Use a technically correct availability check when useful, such as:
+  \`command -v COMMAND\`
+  or the command's safe version check.
+- Replace COMMAND with the real executable name.
+- For shell built-ins such as \`cd\` and commonly available core commands such as \`pwd\`, do not falsely claim that a separate package must be installed.
+- If no installation is needed, say that clearly in natural spoken Telugu.
+
+3. INSTALL ONLY WHEN MISSING
+- If the command genuinely needs a package and the check returns nothing or command not found, guide the viewer through the correct install command for the selected environment.
+- For Termux, use the correct \`pkg install ...\` command.
+- For Ubuntu/Debian, use the correct \`sudo apt install ...\` command only when relevant.
+- Never tell the viewer to install a fake or unnecessary package.
+
+4. RUN THE MAIN COMMAND
+- Tell the viewer exactly what to type.
+- Keep the real command, flags, package names, and paths unchanged in English/code.
+- Explain each important part of the syntax before or immediately after running it.
+
+5. EXPLAIN THE OUTPUT DEEPLY
+- Explain what the output means in simple native Telugu.
+- Connect the output to the viewer's current action.
+- Use a simple analogy or mental model when it improves understanding.
+- Do not repeat the same explanation.
+
+6. REALISTIC ERROR OR CONFUSION
+- Include an error only when that command can realistically produce it.
+- If the command usually succeeds, use a genuine beginner confusion instead of inventing an error.
+- React naturally, for example:
+  “ఓహ్, ఇక్కడ error వచ్చింది. tension పడొద్దు, reason చూద్దాం.”
+  or
+  “ఈ output చూసి confuse అయ్యారా? ఇది error కాదు.”
+- Explain the cause first, then give the safe fix.
+- Never recommend blind fixes such as \`chmod 777\`.
+- Never suggest elevated privileges unless they are truly required.
+
+7. VERIFY THE FIX
+- After the fix, guide the viewer to run the command again or verify the result.
+- Briefly explain how they know it worked.
+
+8. PRACTICE
+- Give one small, safe practice action related to the command.
+- Make the viewer perform it immediately.
+
+9. CTA
+- End with a short motivational follow CTA.
+- Do not mention a specific next-day number.
+
+LANGUAGE AND DELIVERY RULES
+- One continuous, paste-ready voiceover.
+- Telugu script with natural English technical words.
+- Sound like a native Telugu technology guide speaking to a beginner friend.
+- Do not use Roman Telugu.
+- Do not use full textbook/formal Telugu.
+- Prefer words such as command, terminal, folder, directory, path, output, error, fix, install, package, type, Enter, run, work, check, current location.
+- Avoid formal words such as ఆదేశం, సంచయం, దోషం, కార్యనిర్వహణ.
+- Use expressions naturally:
+  [soft background music], [warm tone], [curious tone], [short pause], [pause], [surprised], [calm tone], [confident], [motivational tone].
+- Do not write direct digits in spoken narration.
+- Real commands or versions containing digits may remain exact.
+- Do not say “Screen మీద మీరు...” unless absolutely necessary.
+- Do not repeat any sentence or idea.
+- The requested video length must control the amount of detail.
+
+SECTION-WISE VOICEOVER RULES
+Create separate bullet lines for:
+- Opening Termux
+- Checking command/package availability
+- Installing only if missing
+- Command syntax explanation
+- Running the command
+- Output explanation
+- Realistic error or confusion
+- Safe fix
+- Verification
+- Practice task
+- CTA
+
+Use Telugu script with natural English technical words in every section.
 
 Deep learning rules:
 - English only for deep_explanation and deep_learning_guide.

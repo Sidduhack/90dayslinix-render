@@ -1,13 +1,17 @@
 {
-  "name": "linux-render-v20-single-llama-model",
-    "version": "20.0.0",
-    "description": "Linux reel generator using one stable NVIDIA model for every role",
-    "main": "server.js",
-    "type": "module",
-    "scripts": {"start": "node server.js"},
-    "dependencies": {
-        "dotenv": "^16.4.7",
-        "express": "^4.19.2"
-    },
-    "engines": {"node": ">=18"}
+  "name": "linux-render-v21-realistic-guide-voiceover",
+  "version": "21.0.0",
+  "description": "Single-model Linux reel generator with realistic step-by-step Termux guide voiceover",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }

@@ -1,47 +1,53 @@
+# Linux Website v22 — n8n + ElevenLabs Bridge
 
-# Linux 90 Days Video Script Generator
+This version sends website requests to n8n.
 
-This is a Render-ready web app for generating no-face Instagram Reel / YouTube Shorts scripts for your Linux 90 Days Challenge.
+n8n is responsible for:
 
-## Features
+- Linux script generation
+- Deep explanation
+- Native Telugu voiceover text
+- ElevenLabs audio generation
+- Returning script and MP3 to the website
 
-- Generates daily Linux video scripts
-- Adds requirements and install commands
-- Adds Termux and Ubuntu/Debian support
-- Adds common errors and fixes
-- Adds captions and hashtags
-- Uses NVIDIA NIM / NVIDIA API key safely from environment variables
+## Files
 
-## Local setup
+- `server.js`
+- `package.json`
+- `n8n-workflow-setup.md`
 
-```bash
-npm install
-cp .env.example .env
-# Add your NVIDIA_API_KEY inside .env
-npm start
-```
-
-Open:
+## Render variables
 
 ```text
-http://localhost:10000
+N8N_WEBHOOK_URL=https://YOUR-N8N-DOMAIN/webhook/linux-reel-generate
+N8N_WEBHOOK_SECRET=YOUR_LONG_RANDOM_SECRET
 ```
 
-## Render setup
+## Expected n8n response
 
-1. Upload this folder to GitHub.
-2. Open Render dashboard.
-3. New > Web Service.
-4. Connect your GitHub repo.
-5. Use:
-   - Build command: `npm install`
-   - Start command: `npm start`
-6. Add environment variables:
-   - `NVIDIA_API_KEY`
-   - `NIM_MODEL`
-7. Deploy.
+Return either:
 
-## Important
+```json
+{
+  "ok": true,
+  "output": "complete generated script",
+  "fullVoiceover": "voiceover text",
+  "audioBase64": "BASE64_MP3",
+  "audioMimeType": "audio/mpeg"
+}
+```
 
-Do not upload your real NVIDIA API key to GitHub.
-Always add the API key only in Render Environment Variables.
+or:
+
+```json
+{
+  "ok": true,
+  "output": "complete generated script",
+  "fullVoiceover": "voiceover text",
+  "audioUrl": "https://storage.example/voiceover.mp3"
+}
+```
+
+## Update
+
+Replace the old `package.json` and `server.js`, then deploy the latest commit on Render.

@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v21-realistic-guide-voiceover",
-  "version": "21.0.0",
-  "description": "Single-model Linux reel generator with realistic step-by-step Termux guide voiceover",
+  "name": "linux-render-v22-n8n-elevenlabs-bridge",
+  "version": "22.0.0",
+  "description": "Render website bridge for n8n automation and ElevenLabs voiceover",
   "main": "server.js",
   "type": "module",
   "scripts": {

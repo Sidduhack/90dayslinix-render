@@ -9,8 +9,49 @@ app.use(express.json({ limit: "1mb" }));
 
 const commands = ["pwd","ls","cd","mkdir","touch","cat","cp","mv","rm","chmod","chown","git","curl","wget","grep","find","ps","top","kill","df","du","free","uname","tar","zip/unzip","bash script"];
 
-function getSingleModel() {
-  return process.env.MODEL_ALL || process.env.NIM_MODEL || "meta/llama-3.3-70b-instruct";
+function getN8nWebhookUrl() {
+  return process.env.N8N_WEBHOOK_URL || "";
+}
+
+function getN8nSecret() {
+  return process.env.N8N_WEBHOOK_SECRET || "";
+}
+
+async function callN8n(payload) {
+  const url = getN8nWebhookUrl();
+
+  if (!url) {
+    throw new Error("N8N_WEBHOOK_URL is missing.");
+  }
+
+  const headers = {
+    "Content-Type": "application/json"
+  };
+
+  if (getN8nSecret()) {
+    headers["x-webhook-secret"] = getN8nSecret();
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload)
+  });
+
+  const text = await response.text();
+  let data;
+
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`n8n returned non-JSON response (HTTP ${response.status}): ${text.slice(0, 1000)}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.details || data?.error || `n8n webhook failed with HTTP ${response.status}`);
+  }
+
+  return data;
 }
 
 function getTag(text, tag, fallback = "") {
@@ -180,7 +221,7 @@ code{color:#9ed0ff}
 <main>
 <section class="hero">
 <p class="badge">Linux Challenge • v20 Single Model</p>
-<h1>Realistic Step-by-Step Guide Voiceover</h1>
+<h1>n8n Automated Script + ElevenLabs Voiceover</h1>
 <p class="sub">This version uses <b>meta/llama-3.3-70b-instruct</b> for planner, deep learning, voiceover, psychology reviewer, and final correction.</p>
 </section>
 
@@ -265,12 +306,20 @@ code{color:#9ed0ff}
 
 <div class="status" id="statusBox">Status: Page loaded. Click Generate.</div>
 <div class="note"><b>Model:</b> Uses MODEL_ALL or NIM_MODEL. Default is <code>meta/llama-3.3-70b-instruct</code>.</div>
-<p class="small">Render vars: NVIDIA_API_KEY and MODEL_ALL=meta/llama-3.3-70b-instruct.</p>
+<p class="small">Render vars: N8N_WEBHOOK_URL and N8N_WEBHOOK_SECRET. Keep AI and ElevenLabs keys only inside n8n.</p>
 </section>
 
 <section class="output">
 <div class="head"><h2>Generated Output</h2><button type="button" class="secondary" id="copyBtn">Copy</button></div>
-<pre id="output">Click Generate. Single-model output will appear here.</pre>
+<pre id="output">Click Generate. n8n will return the script and ElevenLabs audio here.</pre>
+<div id="audioBox" style="display:none;margin-top:14px;">
+  <h3>Generated ElevenLabs Voiceover</h3>
+  <audio id="audioPlayer" controls style="width:100%;"></audio>
+  <a id="audioDownload" href="#" download="linux-voiceover.mp3"
+     style="display:inline-block;margin-top:10px;color:#9ed0ff;font-weight:700;">
+     Download MP3
+  </a>
+</div>
 </section>
 </section>
 </main>
@@ -322,8 +371,8 @@ code{color:#9ed0ff}
       extra: $("extra").value.trim()
     };
 
-    setStatus("Generate clicked. Sending request to the single model...");
-    setOutput("Running the single-model all-in-one pipeline...\\n\\nPlanning reel style...\\nWriting deep learning guide...\\nWriting realistic step-by-step Termux guide voiceover...\\nChecking technical accuracy, natural flow, and viewer confidence...\\n\\nPlease wait.");
+    setStatus("Generate clicked. Sending request to n8n automation...");
+    setOutput("Running n8n automation...\\n\\nGenerating script...\\nExtracting native Telugu voiceover...\\nCreating ElevenLabs MP3...\\nReturning the result to the website...\\n\\nPlease wait.");
 
     try{
       const response = await fetch("/api/generate", {
@@ -340,8 +389,32 @@ code{color:#9ed0ff}
         return;
       }
 
-      setOutput(data.output || "No output returned from server.");
-      setStatus("Generation completed.");
+      setOutput(data.output || data.script || "No script returned from n8n.");
+
+      const audioBox = $("audioBox");
+      const audioPlayer = $("audioPlayer");
+      const audioDownload = $("audioDownload");
+
+      let audioSource = "";
+
+      if (data.audioUrl) {
+        audioSource = data.audioUrl;
+      } else if (data.audioBase64) {
+        const mime = data.audioMimeType || "audio/mpeg";
+        audioSource = `data:${mime};base64,${data.audioBase64}`;
+      }
+
+      if (audioSource) {
+        audioPlayer.src = audioSource;
+        audioDownload.href = audioSource;
+        audioBox.style.display = "block";
+      } else {
+        audioPlayer.removeAttribute("src");
+        audioDownload.href = "#";
+        audioBox.style.display = "none";
+      }
+
+      setStatus("n8n automation completed.");
     }catch(error){
       setStatus("Browser request failed: " + error.message);
       setOutput("Browser request failed:\\n" + error.stack);
@@ -367,210 +440,82 @@ code{color:#9ed0ff}
 
 app.get("/", (req, res) => res.type("html").send(html));
 
-app.get("/api/test", (req, res) => {
-  res.json({
-    ok: true,
-    message: "Server and frontend connection working.",
-    hasNvidiaKey: Boolean(process.env.NVIDIA_API_KEY),
-    singleModel: getSingleModel()
-  });
+app.get("/api/test", async (req, res) => {
+  try {
+    const result = await callN8n({
+      action: "test",
+      source: "render-website"
+    });
+
+    res.json({
+      ok: true,
+      message: "Website successfully reached the n8n webhook.",
+      n8n: result
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: "n8n connection test failed.",
+      details: error.message,
+      configuredWebhook: Boolean(getN8nWebhookUrl()),
+      configuredSecret: Boolean(getN8nSecret())
+    });
+  }
 });
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, app: "Linux Realistic Guide Voiceover", version: "21.0.0" });
+  res.json({ ok: true, app: "Linux n8n ElevenLabs Bridge", version: "22.0.0" });
 });
 
 app.post("/api/generate", async (req, res) => {
   try {
-    const { day, command, environment, visualStyle, depth, voiceLength, voiceCoverage, errorStyle, voiceEmotion, psychologyFocus, extra } = req.body;
+    const {
+      day,
+      command,
+      environment,
+      visualStyle,
+      depth,
+      voiceLength,
+      voiceCoverage,
+      errorStyle,
+      voiceEmotion,
+      psychologyFocus,
+      extra
+    } = req.body;
 
-    if (!process.env.NVIDIA_API_KEY) {
-      return res.status(500).json({
-        error: "NVIDIA_API_KEY is missing.",
-        details: "Open Render > your Web Service > Environment > Add NVIDIA_API_KEY. Then redeploy."
+    if (!day || !command) {
+      return res.status(400).json({
+        error: "Day number and Linux command/topic are required."
       });
     }
 
-    if (!day || !command) {
-      return res.status(400).json({ error: "Day number and Linux command/topic are required." });
-    }
+    const result = await callN8n({
+      action: "generate",
+      day,
+      command,
+      environment,
+      visualStyle,
+      depth,
+      voiceLength,
+      voiceCoverage,
+      errorStyle,
+      voiceEmotion,
+      psychologyFocus,
+      extra,
+      requestedOutputs: {
+        script: true,
+        voiceoverText: true,
+        audio: true
+      }
+    });
 
-    const prompt = `
-Return tagged content only. No JSON. No markdown fences.
+    res.json(result);
 
-You are acting as all specialists together:
-1. Viral short-form tech reel planner
-2. Deep Linux teacher
-3. Native Telugu voiceover writer
-4. Viewer psychology and retention reviewer
-5. Final correction editor
-
-Return ALL tags:
-<video_title>...</video_title>
-<hooks>...</hooks>
-<full_voiceover>...</full_voiceover>
-<section_wise_voiceover>...</section_wise_voiceover>
-<visual_style>...</visual_style>
-<edit_timeline>...</edit_timeline>
-<requirements>...</requirements>
-<termux_commands>...</termux_commands>
-<ubuntu_commands>...</ubuntu_commands>
-<main_examples>...</main_examples>
-<deep_explanation>...</deep_explanation>
-<deep_learning_guide>...</deep_learning_guide>
-<errors_fixes>...</errors_fixes>
-<practice_task>...</practice_task>
-<mini_quiz>...</mini_quiz>
-<caption>...</caption>
-<hashtags>...</hashtags>
-<psychology_notes>...</psychology_notes>
-<safety_note>...</safety_note>
-
-Inputs:
-day: ${day}
-command: ${command}
-environment: ${environment}
-visual style: ${visualStyle}
-learning depth: ${depth}
-video length: ${voiceLength}
-voiceover coverage: ${voiceCoverage}
-error style: ${errorStyle}
-native Telugu style: ${voiceEmotion}
-psychology review focus: ${psychologyFocus}
-extra: ${extra || "No extra instruction"}
-
-Global rules:
-- No JSON.
-- No markdown fences.
-- Use exact tags.
-- Do not add extra text outside tags.
-- Avoid repetition.
-- Be accurate.
-- Make content beginner-friendly.
-
-Video planning rules:
-- video_title: English only.
-- hooks: exactly three English bullet lines.
-- visual_style: dark grid, neon green/white text, dotted arrows, Linux icon, terminal screen recording, zoom on output.
-- edit_timeline: English only, timed visual actions from hook to CTA.
-- Do not copy watermark, exact music, or original assets.
-
-VOICEOVER RULES — REALISTIC GUIDER FLOW
-
-The full_voiceover must sound like a real instructor guiding a beginner live inside Termux.
-
-Use this exact teaching order:
-
-1. OPEN TERMUX
-- Start naturally by asking the viewer to open Termux.
-- Do not describe obvious screen details.
-- Guide the next action directly.
-
-2. CHECK REQUIREMENTS FIRST
-- Before running the main command, explain whether it is built into the shell or needs a package.
-- Use a technically correct availability check when useful, such as:
-  \`command -v COMMAND\`
-  or the command's safe version check.
-- Replace COMMAND with the real executable name.
-- For shell built-ins such as \`cd\` and commonly available core commands such as \`pwd\`, do not falsely claim that a separate package must be installed.
-- If no installation is needed, say that clearly in natural spoken Telugu.
-
-3. INSTALL ONLY WHEN MISSING
-- If the command genuinely needs a package and the check returns nothing or command not found, guide the viewer through the correct install command for the selected environment.
-- For Termux, use the correct \`pkg install ...\` command.
-- For Ubuntu/Debian, use the correct \`sudo apt install ...\` command only when relevant.
-- Never tell the viewer to install a fake or unnecessary package.
-
-4. RUN THE MAIN COMMAND
-- Tell the viewer exactly what to type.
-- Keep the real command, flags, package names, and paths unchanged in English/code.
-- Explain each important part of the syntax before or immediately after running it.
-
-5. EXPLAIN THE OUTPUT DEEPLY
-- Explain what the output means in simple native Telugu.
-- Connect the output to the viewer's current action.
-- Use a simple analogy or mental model when it improves understanding.
-- Do not repeat the same explanation.
-
-6. REALISTIC ERROR OR CONFUSION
-- Include an error only when that command can realistically produce it.
-- If the command usually succeeds, use a genuine beginner confusion instead of inventing an error.
-- React naturally, for example:
-  “ఓహ్, ఇక్కడ error వచ్చింది. tension పడొద్దు, reason చూద్దాం.”
-  or
-  “ఈ output చూసి confuse అయ్యారా? ఇది error కాదు.”
-- Explain the cause first, then give the safe fix.
-- Never recommend blind fixes such as \`chmod 777\`.
-- Never suggest elevated privileges unless they are truly required.
-
-7. VERIFY THE FIX
-- After the fix, guide the viewer to run the command again or verify the result.
-- Briefly explain how they know it worked.
-
-8. PRACTICE
-- Give one small, safe practice action related to the command.
-- Make the viewer perform it immediately.
-
-9. CTA
-- End with a short motivational follow CTA.
-- Do not mention a specific next-day number.
-
-LANGUAGE AND DELIVERY RULES
-- One continuous, paste-ready voiceover.
-- Telugu script with natural English technical words.
-- Sound like a native Telugu technology guide speaking to a beginner friend.
-- Do not use Roman Telugu.
-- Do not use full textbook/formal Telugu.
-- Prefer words such as command, terminal, folder, directory, path, output, error, fix, install, package, type, Enter, run, work, check, current location.
-- Avoid formal words such as ఆదేశం, సంచయం, దోషం, కార్యనిర్వహణ.
-- Use expressions naturally:
-  [soft background music], [warm tone], [curious tone], [short pause], [pause], [surprised], [calm tone], [confident], [motivational tone].
-- Do not write direct digits in spoken narration.
-- Real commands or versions containing digits may remain exact.
-- Do not say “Screen మీద మీరు...” unless absolutely necessary.
-- Do not repeat any sentence or idea.
-- The requested video length must control the amount of detail.
-
-SECTION-WISE VOICEOVER RULES
-Create separate bullet lines for:
-- Opening Termux
-- Checking command/package availability
-- Installing only if missing
-- Command syntax explanation
-- Running the command
-- Output explanation
-- Realistic error or confusion
-- Safe fix
-- Verification
-- Practice task
-- CTA
-
-Use Telugu script with natural English technical words in every section.
-
-Deep learning rules:
-- English only for deep_explanation and deep_learning_guide.
-- deep_explanation must include purpose, syntax, how it works, output meaning, flags/options if any, use cases, not-use cases, beginner mistakes, related commands, safe examples, real project use.
-- deep_learning_guide must include mental model, analogy, step-by-step understanding, memory trick, common misconception, how to practice.
-- mini_quiz must include three quick questions with answers.
-- errors_fixes must use realistic errors/confusions only.
-- If no package needed, say "- No extra package required."
-- If no install command needed, say "- None required."
-- For risky commands use safe demo folder only.
-
-Psychology review rules:
-- Improve first three seconds.
-- Improve curiosity and retention.
-- Reduce beginner fear.
-- Make error fix feel calm and simple.
-- Make CTA natural.
-- Remove weak/repeated lines.
-`;
-
-    const reviewed = await callNvidia(prompt, 5200, 0.25);
-    const output = formatOutput(reviewed);
-    res.json({ output });
   } catch (error) {
-    res.status(500).json({ error: "Server error.", details: error.message });
+    res.status(500).json({
+      error: "n8n automation failed.",
+      details: error.message
+    });
   }
 });
 

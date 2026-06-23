@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v27-thirteen-sections",
-  "version": "27.0.0",
-  "description": "Linux 13-section Reel generator with natural Telugu voiceover and multiple command uses",
+  "name": "linux-render-v28-auto-deep-command-guide",
+  "version": "28.0.0",
+  "description": "Thirteen-section Linux generator that expands one command into a full technical guide with natural Telugu voiceover and no time limit",
   "main": "server.js",
   "type": "module",
   "scripts": {

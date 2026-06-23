@@ -148,17 +148,8 @@ function validateSections(sections) {
   }
 }
 
-function maxTokensForLength(length) {
-  switch (length) {
-    case "35 seconds":
-      return 2300;
-    case "45 seconds":
-      return 2700;
-    case "90 seconds":
-      return 4200;
-    default:
-      return 3400;
-  }
+function maxTokensForDeepGuide() {
+  return 5200;
 }
 
 async function callNvidia(prompt, maxTokens) {
@@ -185,16 +176,20 @@ async function callNvidia(prompt, maxTokens) {
           {
             role: "system",
             content:
-              "You create accurate thirteen-section Linux learning content. " +
-              "The voiceover must use everyday spoken Telugu mixed with " +
-              "familiar English tech words. Avoid formal Telugu words such as " +
-              "సరళం, ధృవీకరించండి, సృష్టించి, అమలు చేయండి, " +
-              "నిర్ధారించండి, ఆదేశం, దోషం, ఫలితం, మార్గం, " +
-              "అభినందనలు, శుభాకాంక్షలు, పరిశీలించండి, విధానం. " +
-              "Do not include a troubleshooting or error-handling section. " +
-              "Explain multiple practical ways to use the command. " +
-              "Return only the exact XML-style tags requested by the user. " +
-              "No JSON, analysis, notes, or Markdown fences."
+              "You create technically accurate, comprehensive thirteen-section Linux " +
+              "command guides. The user may provide only one command name, such " +
+              "as pwd. You must automatically identify the command type, default " +
+              "behavior, built-in or package status, valid common options, logical " +
+              "and physical behavior where relevant, related shell variables, " +
+              "safe examples, and real use cases. Never invent flags or behavior. " +
+              "The voiceover must use everyday spoken Telugu mixed with familiar " +
+              "English tech words. Avoid formal Telugu words such as సరళం, " +
+              "ధృవీకరించండి, సృష్టించి, అమలు చేయండి, నిర్ధారించండి, " +
+              "ఆదేశం, దోషం, ఫలితం, మార్గం, అభినందనలు, శుభాకాంక్షలు, " +
+              "పరిశీలించండి, or విధానం. Do not include a troubleshooting or " +
+              "error-handling section. There is no time limit: explain all important " +
+              "valid forms and practical uses fully. Return only the exact XML-style " +
+              "tags requested by the user. No JSON, analysis, notes, or Markdown fences."
           },
           {
             role: "user",
@@ -232,7 +227,7 @@ const html = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Linux 13-Section Content Generator</title>
+<title>Linux Deep Command Guide Generator</title>
 <style>
 :root{
   color-scheme:dark;
@@ -347,11 +342,11 @@ code{color:#a9d9ff}
 <main>
   <section class="hero">
     <span class="badge">90 Days Linux Basics Challenge</span>
-    <h1>13-Section Content Generator</h1>
+    <h1>Deep Linux Command Guide</h1>
     <p class="sub">
-      Complete Reel plan with the updated natural Telugu voiceover:
-      no formal Telugu, no separate error section, and multiple practical
-      ways to use each Linux command.
+      Enter only a command such as <code>pwd</code>. The model automatically
+      finds its valid options, command forms, path behavior, related variables,
+      practical uses, and explains them fully in all thirteen sections.
     </p>
   </section>
 
@@ -371,13 +366,6 @@ code{color:#a9d9ff}
         <option>Both Termux and Ubuntu/Debian</option>
       </select>
 
-      <label for="length">Voiceover length</label>
-      <select id="length">
-        <option>35 seconds</option>
-        <option>45 seconds</option>
-        <option selected>60 seconds</option>
-        <option>90 seconds</option>
-      </select>
 
       <label for="delivery">Voice style</label>
       <select id="delivery">
@@ -392,7 +380,7 @@ code{color:#a9d9ff}
         placeholder="Example: Explain more real-life uses, but keep the voiceover natural."></textarea>
 
       <button class="primary" id="generateBtn" type="button">
-        Generate All 13 Sections
+        Generate Full Command Guide
       </button>
 
       <button class="secondary" id="testBtn" type="button"
@@ -403,8 +391,8 @@ code{color:#a9d9ff}
       <div class="status" id="status">Status: Ready.</div>
 
       <div class="note">
-        Voiceover uses spoken Telugu with English tech words.
-        The old error/fix section is replaced by “Different Ways to Use.”
+        No time limit is applied. The model should explain the complete command,
+        including every important valid form and practical use.
       </div>
 
       <p class="small">
@@ -521,7 +509,6 @@ code{color:#a9d9ff}
       day: byId("day").value.trim(),
       command: byId("command").value.trim(),
       environment: byId("environment").value,
-      length: byId("length").value,
       delivery: byId("delivery").value,
       extra: byId("extra").value.trim()
     };
@@ -532,7 +519,7 @@ code{color:#a9d9ff}
     }
 
     generateBtn.disabled = true;
-    setStatus("Generating thirteen sections...");
+    setStatus("Building the full command guide...");
     renderSections({
       videoTitle: "Generating...",
       hooks: "Writing three hooks...",
@@ -572,7 +559,7 @@ code{color:#a9d9ff}
 
       latestData = data.sections;
       renderSections(latestData);
-      setStatus("All thirteen sections generated.");
+      setStatus("Full command guide generated.");
     } catch (error) {
       renderSections({
         videoTitle: "Browser request failed:\\n" + error.message
@@ -608,8 +595,8 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
-    app: "Linux 13-Section Content Generator",
-    version: "27.0.0"
+    app: "Linux Auto Deep Command Guide",
+    version: "28.0.0"
   });
 });
 
@@ -619,7 +606,7 @@ app.get("/api/test", (req, res) => {
     server: "working",
     hasNvidiaKey: Boolean(process.env.NVIDIA_API_KEY),
     model: getModel(),
-    format: "13-sections"
+    format: "13-sections-deep-auto"
   });
 });
 
@@ -629,7 +616,6 @@ app.post("/api/generate", async (req, res) => {
       day,
       command,
       environment,
-      length,
       delivery,
       extra
     } = req.body || {};
@@ -647,9 +633,49 @@ INPUT
 Day: ${day}
 Command/topic: ${command}
 Environment: ${environment || "Termux on Android"}
-Target voiceover duration: ${length || "60 seconds"}
 Voice delivery: ${delivery || "Confident and friendly Telugu tech guide"}
+Depth: Full command guide with no time limit
 Extra instruction: ${extra || "None"}
+
+AUTOMATIC COMMAND DISCOVERY
+The user may give only the command name. Do not ask for its flags or variants.
+Automatically research the command from your Linux knowledge and explain:
+
+- What kind of command it is: shell built-in, core utility, or package command.
+- Its default form and exact default behavior.
+- Every important, valid, commonly useful option or form.
+- Differences between similar forms.
+- Related shell variables or standard alternatives when directly relevant.
+- Logical versus physical path behavior when the command works with paths.
+- What each output value means.
+- Practical use in Termux, Ubuntu/Debian, and shell scripts when applicable.
+- Safe copyable examples for every important form.
+- Which forms are common and which are advanced.
+- Important limitations or platform differences.
+- Do not invent unsupported flags merely to increase the number of examples.
+
+SPECIAL PATH RULE
+For path-related commands, explain path concepts completely:
+- absolute path
+- relative path
+- current working directory
+- home directory
+- logical path
+- physical path
+- symbolic links
+- environment variables such as $PWD and $OLDPWD when relevant
+- how the command behaves after cd or through a symbolic link
+
+For pwd specifically, the guide must automatically explain at least:
+- pwd
+- pwd -L
+- pwd -P
+- the difference between logical and physical paths
+- how symbolic links affect the result
+- $PWD and echo "$PWD"
+- using current_path=$(pwd)
+- safe practical demonstrations with a symbolic link
+- no extra package required in normal Termux and Ubuntu/Debian shells
 
 RETURN EXACTLY THESE TAGS AND NOTHING ELSE
 
@@ -755,25 +781,34 @@ VOICEOVER FLOW
 - Ask the viewer to open ${environment || "Termux"} naturally.
 - State accurately whether any package is needed.
 - Install something only when it is genuinely required.
-- Tell the viewer exactly what to type.
-- Explain the command meaning or full form when one exists.
-- Explain the output in simple spoken Telugu.
-- Explain multiple practical ways to use the command.
-- For a sixty-second voiceover, normally include three practical ways.
-- Explain when each way is useful.
-- Give one small practice task.
+- Begin with the basic command and explain its output fully.
+- Automatically continue through every important valid option or form.
+- Explain the difference between similar forms in natural spoken Telugu.
+- For path-related commands, fully explain logical path, physical path,
+  absolute path, relative path, symbolic links, and relevant shell variables.
+- Give a safe command demonstration for each important form.
+- Explain when each form is useful in normal terminal work and shell scripts.
+- Do not limit the number of examples because there is no duration limit.
+- Do not repeat the same explanation.
+- Give a complete practice task covering the important forms.
 - Finish with a short motivational follow CTA.
+- Do not add an error-handling or troubleshooting section.
 
 4. SCREEN-RECORDING TIMELINE
-Create a practical Reel timeline:
-- zero to two seconds: title
-- two to five seconds: hook
-- five to fifteen seconds: open Termux and main command
-- fifteen to twenty-two seconds: command meaning and output
-- twenty-two to twenty-eight seconds: different ways/examples
-- twenty-eight seconds onward: practice and CTA
-Adjust timings to the selected duration.
-State exactly what should be recorded.
+Create a complete recording plan with no fixed duration:
+- title and hook
+- open Termux
+- package/built-in check
+- basic command
+- output explanation
+- each important option or form in its own recording segment
+- path or symbolic-link demonstration when relevant
+- shell-variable or scripting example when relevant
+- practice task
+- CTA
+Estimate realistic timing for every segment based on the generated content.
+Do not force the guide into a short Reel when the command needs more explanation.
+State exactly what should be recorded in each segment.
 
 5. REQUIREMENTS
 - List only genuine requirements.
@@ -795,18 +830,24 @@ State exactly what should be recorded.
 8. MAIN COMMAND EXAMPLES
 - Give safe, copyable commands.
 - Include the basic command first.
-- Add useful flags or arguments only when technically correct.
+- Include every important valid common form automatically.
+- Add related variables or shell-script forms when directly relevant.
+- For path commands, include demonstrations of logical and physical paths.
+- Explain the expected output under every command.
 - Keep each command on a separate line.
 - Do not use destructive real paths.
+- Never invent a flag or syntax.
 
 9. DIFFERENT WAYS TO USE THE COMMAND
 - Replace the old errors/fixes section with this section.
-- Explain multiple practical ways to use the command.
-- Normally give at least three ways.
-- Explain what each way changes and when it is useful.
+- Explain all important valid ways to use the command, not only three.
+- Separate default behavior, common options, advanced forms, variables,
+  scripting usage, and path behavior when relevant.
+- Explain exactly what changes in each form and when it is useful.
+- Clearly compare similar forms, such as logical versus physical path output.
 - When the command has only one common form, explain different real-life
   situations instead of inventing fake flags.
-- Keep the explanations beginner-friendly.
+- Keep every explanation beginner-friendly but technically complete.
 
 10. PRACTICE TASK
 - Give one small task the viewer can complete immediately.
@@ -841,7 +882,7 @@ TECHNICAL ACCURACY
 
     const raw = await callNvidia(
       prompt,
-      maxTokensForLength(length)
+      maxTokensForDeepGuide()
     );
 
     const sections = parseThirteenSections(raw);
@@ -851,7 +892,7 @@ TECHNICAL ACCURACY
       ok: true,
       sections,
       model: getModel(),
-      format: "13-sections"
+      format: "13-sections-deep-auto"
     });
   } catch (error) {
     res.status(500).json({
@@ -862,5 +903,5 @@ TECHNICAL ACCURACY
 });
 
 app.listen(PORT, () => {
-  console.log(`Linux 13-section app running on port ${PORT}`);
+  console.log(`Linux deep command guide app running on port ${PORT}`);
 });

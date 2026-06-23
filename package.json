@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v24-voiceover-only",
-  "version": "24.0.0",
-  "description": "Simple Telugu Linux voiceover-only generator using NVIDIA API",
+  "name": "linux-render-v25-natural-spoken-telugu",
+  "version": "25.0.0",
+  "description": "Natural spoken Telugu Linux voiceover generator using familiar English tech words",
   "main": "server.js",
   "type": "module",
   "scripts": {

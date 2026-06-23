@@ -21,6 +21,75 @@ function getModel() {
     "meta/llama-3.3-70b-instruct";
 }
 
+function makeTeluguNatural(script) {
+  const replacements = [
+    [/సరళంగా/g, "simple గా"],
+    [/సరళమైన/g, "simple"],
+    [/సరళం/g, "simple"],
+
+    [/ధృవీకరించండి/g, "check చేయండి"],
+    [/ధృవీకరించి/g, "check చేసి"],
+    [/ధృవీకరణ/g, "check"],
+
+    [/సృష్టించండి/g, "create చేయండి"],
+    [/సృష్టించి/g, "create చేసి"],
+    [/సృష్టించిన/g, "create చేసిన"],
+    [/సృష్టించడం/g, "create చేయడం"],
+    [/సృష్టించాలి/g, "create చేయాలి"],
+
+    [/రూపొందించండి/g, "create చేయండి"],
+    [/రూపొందించి/g, "create చేసి"],
+
+    [/అమలు చేయండి/g, "run చేయండి"],
+    [/అమలు చేసి/g, "run చేసి"],
+    [/అమలు చేయడం/g, "run చేయడం"],
+
+    [/నిర్ధారించండి/g, "check చేయండి"],
+    [/నిర్ధారించి/g, "check చేసి"],
+
+    [/వినియోగించండి/g, "use చేయండి"],
+    [/వినియోగించి/g, "use చేసి"],
+
+    [/ఆదేశాన్ని/g, "command ని"],
+    [/ఆదేశాలు/g, "commands"],
+    [/ఆదేశం/g, "command"],
+
+    [/దోషాన్ని/g, "error ని"],
+    [/దోషాలు/g, "errors"],
+    [/దోషం/g, "error"],
+
+    [/ఫలితాన్ని/g, "output ని"],
+    [/ఫలితం/g, "output"],
+
+    [/మార్గాన్ని/g, "path ని"],
+    [/మార్గం/g, "path"],
+
+    [/నిర్దేశిక/g, "directory"],
+    [/దస్త్రం/g, "file"],
+    [/అనుమతి/g, "permission"],
+    [/వ్యవస్థ/g, "system"],
+
+    [/ప్రదర్శిస్తుంది/g, "చూపిస్తుంది"],
+    [/ప్రదర్శించబడుతుంది/g, "కనిపిస్తుంది"],
+    [/నమోదు చేయండి/g, "type చేయండి"],
+    [/నొక్కండి/g, "press చేయండి"],
+
+    [/కార్యనిర్వహణ/g, "run చేయడం"],
+    [/కార్యాచరణ/g, "process"]
+  ];
+
+  let result = String(script || "");
+
+  for (const [pattern, replacement] of replacements) {
+    result = result.replace(pattern, replacement);
+  }
+
+  return result
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ *\n */g, "\n")
+    .trim();
+}
+
 function extractVoiceover(text) {
   const content = String(text || "").trim();
 
@@ -36,7 +105,7 @@ function extractVoiceover(text) {
     .replace(/^["']|["']$/g, "")
     .trim();
 
-  return script;
+  return makeTeluguNatural(script);
 }
 
 function tokenLimitForLength(length) {
@@ -76,9 +145,13 @@ async function generateVoiceover(prompt, maxTokens) {
           {
             role: "system",
             content:
-              "You write accurate, natural Telugu Linux voiceover scripts. " +
-              "Return only the requested <voiceover> tag. No JSON, headings, " +
-              "analysis, notes, or Markdown fences."
+              "You write accurate Linux voiceovers in everyday spoken Telugu mixed " +
+              "with familiar English tech words. Never use formal Telugu words " +
+              "such as సరళం, ధృవీకరించండి, సృష్టించి, అమలు చేయండి, " +
+              "నిర్ధారించండి, ఆదేశం, దోషం, ఫలితం, or మార్గం. " +
+              "Use simple, check చేయండి, create చేసి, run చేయండి, command, " +
+              "error, output, path, and fix instead. Return only the requested " +
+              "<voiceover> tag. No JSON, headings, analysis, notes, or Markdown fences."
           },
           {
             role: "user",
@@ -406,7 +479,7 @@ app.get("/health", (req, res) => {
   res.json({
     ok: true,
     app: "Linux Telugu Voiceover Generator",
-    version: "24.0.0"
+    version: "25.0.0"
   });
 });
 
@@ -462,6 +535,24 @@ STRICT OUTPUT RULES
 - Write in native Telugu script with natural English technical words.
 - Do not use Roman Telugu.
 - Do not use formal textbook Telugu.
+- Never use words such as:
+  సరళం, సరళంగా, ధృవీకరించండి, ధృవీకరణ,
+  సృష్టించండి, సృష్టించి, రూపొందించండి,
+  అమలు చేయండి, నిర్ధారించండి, వినియోగించండి,
+  ఆదేశం, దోషం, ఫలితం, మార్గం, నిర్దేశిక,
+  దస్త్రం, కార్యనిర్వహణ, కార్యాచరణ.
+- Use natural spoken alternatives:
+  simple, check చేయండి, check చేసి,
+  create చేయండి, create చేసి,
+  run చేయండి, use చేయండి,
+  command, error, output, path, directory,
+  file, permission, system, fix.
+- Prefer natural lines like:
+  “ముందుగా Termux open చేయండి.”
+  “ఇప్పుడు ఇలా type చేయండి.”
+  “Enter press చేయండి.”
+  “Output లో path కనిపిస్తుంది.”
+  “Spelling check చేసి మళ్లీ run చేయండి.”
 - Keep Linux commands, flags, paths, package names, and error messages
   exactly in English.
 - Put important commands on their own line inside backticks.
@@ -543,5 +634,5 @@ realistic confusion/error fix, verification, practice, and CTA.
 });
 
 app.listen(PORT, () => {
-  console.log(`Voiceover-only app running on port ${PORT}`);
+  console.log(`Natural-spoken-Telugu voiceover app running on port ${PORT}`);
 });

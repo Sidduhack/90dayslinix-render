@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v22-n8n-elevenlabs-bridge",
-  "version": "22.0.0",
-  "description": "Render website bridge for n8n automation and ElevenLabs voiceover",
+  "name": "linux-render-v17-full-voiceover-deep-learning",
+  "version": "17.0.0",
+  "description": "Linux reel generator with full-video native Telugu voiceover and deep learning guide",
   "main": "server.js",
   "type": "module",
   "scripts": {

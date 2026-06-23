@@ -9,49 +9,20 @@ app.use(express.json({ limit: "1mb" }));
 
 const commands = ["pwd","ls","cd","mkdir","touch","cat","cp","mv","rm","chmod","chown","git","curl","wget","grep","find","ps","top","kill","df","du","free","uname","tar","zip/unzip","bash script"];
 
-function getN8nWebhookUrl() {
-  return process.env.N8N_WEBHOOK_URL || "";
-}
+const DEFAULT_MODELS = {
+  planner: "meta/llama-3.3-70b-instruct",
+  deep: "meta/llama-3.3-70b-instruct",
+  voice: "meta/llama-3.3-70b-instruct",
+  psychology: "meta/llama-3.3-70b-instruct",
+  fallback: "meta/llama-3.3-70b-instruct"
+};
 
-function getN8nSecret() {
-  return process.env.N8N_WEBHOOK_SECRET || "";
-}
-
-async function callN8n(payload) {
-  const url = getN8nWebhookUrl();
-
-  if (!url) {
-    throw new Error("N8N_WEBHOOK_URL is missing.");
-  }
-
-  const headers = {
-    "Content-Type": "application/json"
-  };
-
-  if (getN8nSecret()) {
-    headers["x-webhook-secret"] = getN8nSecret();
-  }
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(payload)
-  });
-
-  const text = await response.text();
-  let data;
-
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error(`n8n returned non-JSON response (HTTP ${response.status}): ${text.slice(0, 1000)}`);
-  }
-
-  if (!response.ok) {
-    throw new Error(data?.details || data?.error || `n8n webhook failed with HTTP ${response.status}`);
-  }
-
-  return data;
+function getModel(role) {
+  if (role === "planner") return process.env.MODEL_PLANNER || process.env.NIM_MODEL || DEFAULT_MODELS.planner;
+  if (role === "deep") return process.env.MODEL_DEEP || process.env.NIM_MODEL || DEFAULT_MODELS.deep;
+  if (role === "voice") return process.env.MODEL_VOICE || process.env.NIM_MODEL || DEFAULT_MODELS.voice;
+  if (role === "psychology") return process.env.MODEL_PSYCHOLOGY || process.env.NIM_MODEL || DEFAULT_MODELS.psychology;
+  return process.env.MODEL_FALLBACK || process.env.NIM_MODEL || DEFAULT_MODELS.fallback;
 }
 
 function getTag(text, tag, fallback = "") {
@@ -60,9 +31,7 @@ function getTag(text, tag, fallback = "") {
   return match ? match[1].trim() : fallback;
 }
 
-async function callNvidia(prompt, maxTokens = 1800, temperature = 0.25) {
-  const model = getSingleModel();
-
+async function callNvidia(model, prompt, maxTokens = 1800, temperature = 0.25) {
   const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -75,7 +44,7 @@ async function callNvidia(prompt, maxTokens = 1800, temperature = 0.25) {
       messages: [
         {
           role: "system",
-          content: "Return tagged content only. No JSON. No markdown fences. Follow tags exactly. Be accurate, concise, and avoid repetition."
+          content: "Return tagged content only. No JSON. No markdown fences. Follow tags exactly."
         },
         { role: "user", content: prompt }
       ],
@@ -93,13 +62,35 @@ async function callNvidia(prompt, maxTokens = 1800, temperature = 0.25) {
   return data?.choices?.[0]?.message?.content || "";
 }
 
-function formatOutput(reviewed) {
-  const model = getSingleModel();
+async function callSpecialist(role, prompt, maxTokens, temperature) {
+  const specialist = getModel(role);
+  const fallback = getModel("fallback");
+  try {
+    return {
+      text: await callNvidia(specialist, prompt, maxTokens, temperature),
+      model: specialist,
+      fallbackUsed: false
+    };
+  } catch (error) {
+    if (specialist === fallback) throw error;
+    return {
+      text: await callNvidia(fallback, prompt, maxTokens, temperature),
+      model: fallback,
+      fallbackUsed: true
+    };
+  }
+}
+
+function formatOutput(reviewed, modelInfo) {
+  const modelLine = `Planner: ${modelInfo.planner}${modelInfo.plannerFallback ? " (fallback used)" : ""}
+Deep Learning: ${modelInfo.deep}${modelInfo.deepFallback ? " (fallback used)" : ""}
+Full Voiceover: ${modelInfo.voice}${modelInfo.voiceFallback ? " (fallback used)" : ""}
+Psychology Reviewer: ${modelInfo.psychology}${modelInfo.psychologyFallback ? " (fallback used)" : ""}`;
 
   const videoTitle = getTag(reviewed, "video_title", "\"Linux Command Tutorial\"");
   const hooks = getTag(reviewed, "hooks", "- Learn this Linux command clearly.\n- Fix beginner confusion.\n- Practice Linux visually.");
   const fullVoiceover = getTag(reviewed, "full_voiceover", "[warm tone]\nఈ రోజు మనం Linux command ని deep గా నేర్చుకుందాం. [pause]");
-  const sectionVoiceover = getTag(reviewed, "section_wise_voiceover", "- Hook voiceover\n- Concept voiceover\n- Demo voiceover\n- Error fix voiceover\n- CTA voiceover");
+  const sectionVoiceover = getTag(reviewed, "section_wise_voiceover", "- Hook voiceover\n- Explanation voiceover\n- Demo voiceover\n- Error fix voiceover\n- CTA voiceover");
   const visualStyle = getTag(reviewed, "visual_style", "- Dark black grid background\n- Neon green and white text\n- Terminal recording with zoom");
   const editTimeline = getTag(reviewed, "edit_timeline", "- 0s-3s: Show title\n- 3s-15s: Explain command\n- 15s-35s: Terminal demo and error fix");
   const requirements = getTag(reviewed, "requirements", "- No extra package required.");
@@ -116,15 +107,8 @@ function formatOutput(reviewed) {
   const psychologyNotes = getTag(reviewed, "psychology_notes", "- Hook improved for curiosity.\n- Repetition removed.\n- CTA made motivating.");
   const safety = getTag(reviewed, "safety_note", "Always understand a command before running it.");
 
-  return `0. MODEL USED FOR ALL ROLES
-${model}
-
-Roles powered by this one model:
-- Reel planner
-- Deep Linux teacher
-- Native Telugu voiceover writer
-- Viewer psychology reviewer
-- Final correction pass
+  return `0. MODELS USED
+${modelLine}
 
 1. VIDEO TITLE
 ${videoTitle}
@@ -189,7 +173,7 @@ const html = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Linux Single Model Generator</title>
+<title>Linux Full Voiceover Deep Learning</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#070b12;color:#f3f7ff;font-family:Arial,"Noto Sans Telugu",sans-serif}
@@ -220,9 +204,9 @@ code{color:#9ed0ff}
 <body>
 <main>
 <section class="hero">
-<p class="badge">Linux Challenge • v20 Single Model</p>
-<h1>n8n Automated Script + ElevenLabs Voiceover</h1>
-<p class="sub">This version uses <b>meta/llama-3.3-70b-instruct</b> for planner, deep learning, voiceover, psychology reviewer, and final correction.</p>
+<p class="badge">Linux Challenge • v17 Full Voiceover + Deep Learning</p>
+<h1>Full Video Voiceover + Deep Learning Guide</h1>
+<p class="sub">This version creates voiceover for the full video, section-wise voiceover, deep command explanation, deep learning guide, mini quiz, practice task, error fix, and psychology review.</p>
 </section>
 
 <section class="grid">
@@ -301,25 +285,17 @@ code{color:#9ed0ff}
 <label>Extra instruction</label>
 <textarea id="extra" placeholder="Example: Make the voiceover cover every visual step. Teach deeply but keep it beginner friendly."></textarea>
 
-<button type="button" class="primary" id="generateBtn">Generate With One Model</button>
+<button type="button" class="primary" id="generateBtn">Generate Full Voiceover + Deep Learning</button>
 <button type="button" class="secondary" id="testBtn" style="width:100%;margin-top:10px;">Test API Connection</button>
 
 <div class="status" id="statusBox">Status: Page loaded. Click Generate.</div>
-<div class="note"><b>Model:</b> Uses MODEL_ALL or NIM_MODEL. Default is <code>meta/llama-3.3-70b-instruct</code>.</div>
-<p class="small">Render vars: N8N_WEBHOOK_URL and N8N_WEBHOOK_SECRET. Keep AI and ElevenLabs keys only inside n8n.</p>
+<div class="note"><b>New:</b> Full video voiceover, section-wise voiceover, deep learning guide, mini quiz, and psychology correction.</div>
+<p class="small">Render vars: NVIDIA_API_KEY, MODEL_PLANNER, MODEL_DEEP, MODEL_VOICE, MODEL_PSYCHOLOGY, MODEL_FALLBACK.</p>
 </section>
 
 <section class="output">
 <div class="head"><h2>Generated Output</h2><button type="button" class="secondary" id="copyBtn">Copy</button></div>
-<pre id="output">Click Generate. n8n will return the script and ElevenLabs audio here.</pre>
-<div id="audioBox" style="display:none;margin-top:14px;">
-  <h3>Generated ElevenLabs Voiceover</h3>
-  <audio id="audioPlayer" controls style="width:100%;"></audio>
-  <a id="audioDownload" href="#" download="linux-voiceover.mp3"
-     style="display:inline-block;margin-top:10px;color:#9ed0ff;font-weight:700;">
-     Download MP3
-  </a>
-</div>
+<pre id="output">Click Generate. Full voiceover and deep learning output will appear here.</pre>
 </section>
 </section>
 </main>
@@ -371,8 +347,8 @@ code{color:#9ed0ff}
       extra: $("extra").value.trim()
     };
 
-    setStatus("Generate clicked. Sending request to n8n automation...");
-    setOutput("Running n8n automation...\\n\\nGenerating script...\\nExtracting native Telugu voiceover...\\nCreating ElevenLabs MP3...\\nReturning the result to the website...\\n\\nPlease wait.");
+    setStatus("Generate clicked. Sending request...");
+    setOutput("Running full pipeline...\\n\\nStep one: visual planner\\nStep two: deep learning expert\\nStep three: full Telugu voiceover writer\\nStep four: psychology reviewer and correction\\n\\nPlease wait.");
 
     try{
       const response = await fetch("/api/generate", {
@@ -389,32 +365,8 @@ code{color:#9ed0ff}
         return;
       }
 
-      setOutput(data.output || data.script || "No script returned from n8n.");
-
-      const audioBox = $("audioBox");
-      const audioPlayer = $("audioPlayer");
-      const audioDownload = $("audioDownload");
-
-      let audioSource = "";
-
-      if (data.audioUrl) {
-        audioSource = data.audioUrl;
-      } else if (data.audioBase64) {
-        const mime = data.audioMimeType || "audio/mpeg";
-        audioSource = "data:" + mime + ";base64," + data.audioBase64;
-      }
-
-      if (audioSource) {
-        audioPlayer.src = audioSource;
-        audioDownload.href = audioSource;
-        audioBox.style.display = "block";
-      } else {
-        audioPlayer.removeAttribute("src");
-        audioDownload.href = "#";
-        audioBox.style.display = "none";
-      }
-
-      setStatus("n8n automation completed.");
+      setOutput(data.output || "No output returned from server.");
+      setStatus("Generation completed.");
     }catch(error){
       setStatus("Browser request failed: " + error.message);
       setOutput("Browser request failed:\\n" + error.stack);
@@ -440,83 +392,224 @@ code{color:#9ed0ff}
 
 app.get("/", (req, res) => res.type("html").send(html));
 
-app.get("/api/test", async (req, res) => {
-  try {
-    const result = await callN8n({
-      action: "test",
-      source: "render-website"
-    });
-
-    res.json({
-      ok: true,
-      message: "Website successfully reached the n8n webhook.",
-      n8n: result
-    });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      error: "n8n connection test failed.",
-      details: error.message,
-      configuredWebhook: Boolean(getN8nWebhookUrl()),
-      configuredSecret: Boolean(getN8nSecret())
-    });
-  }
+app.get("/api/test", (req, res) => {
+  res.json({
+    ok: true,
+    message: "Server and frontend connection working.",
+    hasNvidiaKey: Boolean(process.env.NVIDIA_API_KEY),
+    models: {
+      planner: getModel("planner"),
+      deep: getModel("deep"),
+      voice: getModel("voice"),
+      psychology: getModel("psychology"),
+      fallback: getModel("fallback")
+    }
+  });
 });
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, app: "Linux n8n ElevenLabs Bridge", version: "22.0.0" });
+  res.json({ ok: true, app: "Linux Full Voiceover Deep Learning", version: "17.0.0" });
 });
 
 app.post("/api/generate", async (req, res) => {
   try {
-    const {
-      day,
-      command,
-      environment,
-      visualStyle,
-      depth,
-      voiceLength,
-      voiceCoverage,
-      errorStyle,
-      voiceEmotion,
-      psychologyFocus,
-      extra
-    } = req.body;
+    const { day, command, environment, visualStyle, depth, voiceLength, voiceCoverage, errorStyle, voiceEmotion, psychologyFocus, extra } = req.body;
 
-    if (!day || !command) {
-      return res.status(400).json({
-        error: "Day number and Linux command/topic are required."
+    if (!process.env.NVIDIA_API_KEY) {
+      return res.status(500).json({
+        error: "NVIDIA_API_KEY is missing.",
+        details: "Open Render > your Web Service > Environment > Add NVIDIA_API_KEY. Then redeploy."
       });
     }
 
-    const result = await callN8n({
-      action: "generate",
-      day,
-      command,
-      environment,
-      visualStyle,
-      depth,
-      voiceLength,
-      voiceCoverage,
-      errorStyle,
-      voiceEmotion,
-      psychologyFocus,
-      extra,
-      requestedOutputs: {
-        script: true,
-        voiceoverText: true,
-        audio: true
-      }
+    if (!day || !command) {
+      return res.status(400).json({ error: "Day number and Linux command/topic are required." });
+    }
+
+    const plannerPrompt = `
+Return tagged content only. No JSON. No markdown fences.
+
+Fill only:
+<video_title>...</video_title>
+<hooks>...</hooks>
+<visual_style>...</visual_style>
+<edit_timeline>...</edit_timeline>
+<caption>...</caption>
+<hashtags>...</hashtags>
+<safety_note>...</safety_note>
+
+Create a dark-grid Linux reel plan.
+
+Inputs:
+day: ${day}
+command: ${command}
+environment: ${environment}
+visual style: ${visualStyle}
+video length: ${voiceLength}
+extra: ${extra || "No extra instruction"}
+
+Rules:
+- video_title: English only.
+- hooks: exactly three English bullet lines, strong first three seconds.
+- visual_style: dark grid, neon green/white text, dotted arrows, Linux icon, terminal screen recording, zoom on output.
+- edit_timeline: English only, timed visual actions. Cover every step from hook to CTA.
+- caption: native Telugu + English tech words allowed.
+- hashtags: eight to sixteen hashtags.
+- safety_note: English only.
+`;
+
+    const deepPrompt = `
+Return tagged content only. No JSON. No markdown fences.
+
+Fill only:
+<requirements>...</requirements>
+<termux_commands>...</termux_commands>
+<ubuntu_commands>...</ubuntu_commands>
+<main_examples>...</main_examples>
+<deep_explanation>...</deep_explanation>
+<deep_learning_guide>...</deep_learning_guide>
+<errors_fixes>...</errors_fixes>
+<practice_task>...</practice_task>
+<mini_quiz>...</mini_quiz>
+
+Inputs:
+command: ${command}
+environment: ${environment}
+learning depth: ${depth}
+
+Rules:
+- English only.
+- Teach deeply but beginner-friendly.
+- If no package needed, say "- No extra package required."
+- If no install command needed, say "- None required."
+- deep_explanation must include purpose, syntax, how it works, output meaning, flags/options if any, use cases, not-use cases, beginner mistakes, related commands, safe examples, real project use.
+- deep_learning_guide must include: mental model, analogy, step-by-step understanding, memory trick, common misconception, how to practice.
+- errors_fixes must use realistic errors/confusions only.
+- mini_quiz must include three quick questions with answers.
+- For risky commands use safe demo folder only.
+`;
+
+    const voicePrompt = `
+Return tagged content only. No JSON. No markdown fences.
+
+Fill only:
+<full_voiceover>...</full_voiceover>
+<section_wise_voiceover>...</section_wise_voiceover>
+
+Inputs:
+day: ${day}
+command: ${command}
+environment: ${environment}
+video length: ${voiceLength}
+voiceover coverage: ${voiceCoverage}
+error style: ${errorStyle}
+voice style: ${voiceEmotion}
+
+Rules for full_voiceover:
+- Voiceover must cover the full video: hook, command meaning, deep explanation, terminal demo, output meaning, error/confusion fix, practice task, mini quiz style question, CTA.
+- Telugu script + natural English tech words.
+- Native Telugu creator style, not textbook Telugu.
+- Do not use Roman Telugu.
+- Do not use full formal Telugu.
+- Use command, terminal, folder, path, output, error, fix, install, package, type, Enter, work.
+- Avoid ఆదేశం, సంచయం, దోషం, కార్యనిర్వహణ.
+- No repeated sentence or idea.
+- Use [soft background music], [warm tone], [short pause], [pause], [surprised], [calm tone], [confident], [motivational tone].
+- No direct digits in spoken lines.
+- Commands stay exact, for example \`${command}\`.
+- Include an error/confusion fix moment.
+- End with a short motivational follow CTA.
+
+Rules for section_wise_voiceover:
+- Make separate bullet lines for Hook voiceover, Concept voiceover, Terminal demo voiceover, Error fix voiceover, Practice voiceover, CTA voiceover.
+- Telugu script + English tech words.
+`;
+
+    const plan = await callSpecialist("planner", plannerPrompt, 1500, 0.25);
+    const deep = await callSpecialist("deep", deepPrompt, 2600, 0.18);
+    const voice = await callSpecialist("voice", voicePrompt, 2200, 0.32);
+
+    const reviewerPrompt = `
+Return tagged content only. No JSON. No markdown fences.
+
+You are a viewer psychology, attention, retention, beginner-learning, and trust reviewer for short-form tech videos.
+
+Return ALL final tags:
+<video_title>...</video_title>
+<hooks>...</hooks>
+<full_voiceover>...</full_voiceover>
+<section_wise_voiceover>...</section_wise_voiceover>
+<visual_style>...</visual_style>
+<edit_timeline>...</edit_timeline>
+<requirements>...</requirements>
+<termux_commands>...</termux_commands>
+<ubuntu_commands>...</ubuntu_commands>
+<main_examples>...</main_examples>
+<deep_explanation>...</deep_explanation>
+<deep_learning_guide>...</deep_learning_guide>
+<errors_fixes>...</errors_fixes>
+<practice_task>...</practice_task>
+<mini_quiz>...</mini_quiz>
+<caption>...</caption>
+<hashtags>...</hashtags>
+<psychology_notes>...</psychology_notes>
+<safety_note>...</safety_note>
+
+Review focus: ${psychologyFocus}
+Command: ${command}
+Environment: ${environment}
+Extra: ${extra || "No extra instruction"}
+
+Improve:
+- Hook strength
+- Full voiceover coverage
+- Deep learning clarity
+- Beginner confidence
+- Curiosity and retention
+- Error anxiety reduction
+- Repetition removal
+- Native Telugu flow
+- CTA quality
+- Accuracy
+
+DRAFT PLAN:
+${plan.text}
+
+DRAFT DEEP LEARNING:
+${deep.text}
+
+DRAFT VOICEOVER:
+${voice.text}
+
+Strict:
+- Voiceover must be native spoken Telugu style.
+- Telugu script + English tech words.
+- No Roman Telugu.
+- No formal Telugu.
+- No repeated sentences.
+- Include error/confusion fix moment.
+- No direct digits in spoken lines.
+- Keep expression tags.
+- Deep explanation and deep learning guide must be English only.
+`;
+
+    const review = await callSpecialist("psychology", reviewerPrompt, 4200, 0.22);
+
+    const output = formatOutput(review.text, {
+      planner: plan.model,
+      plannerFallback: plan.fallbackUsed,
+      deep: deep.model,
+      deepFallback: deep.fallbackUsed,
+      voice: voice.model,
+      voiceFallback: voice.fallbackUsed,
+      psychology: review.model,
+      psychologyFallback: review.fallbackUsed
     });
 
-    res.json(result);
-
+    res.json({ output });
   } catch (error) {
-    res.status(500).json({
-      error: "n8n automation failed.",
-      details: error.message
-    });
+    res.status(500).json({ error: "Server error.", details: error.message });
   }
 });
 
-app.listen(PORT, () => console.log(`Single-model all-in-one app running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Full voiceover deep learning app running on port ${PORT}`));

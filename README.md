@@ -1,53 +1,62 @@
-# Linux Website v22 — n8n + ElevenLabs Bridge
+# Linux Render v24 — Voiceover Only
 
-This version sends website requests to n8n.
+This version removes:
 
-n8n is responsible for:
+- n8n
+- ElevenLabs automation
+- Base64 MP3 responses
+- captions, timelines, quizzes, and long multi-section output
 
-- Linux script generation
-- Deep explanation
-- Native Telugu voiceover text
-- ElevenLabs audio generation
-- Returning script and MP3 to the website
+It generates only one continuous, paste-ready Telugu Linux voiceover script.
 
-## Files
-
-- `server.js`
-- `package.json`
-- `n8n-workflow-setup.md`
-
-## Render variables
+## Required Render environment variable
 
 ```text
-N8N_WEBHOOK_URL=https://YOUR-N8N-DOMAIN/webhook/linux-reel-generate
-N8N_WEBHOOK_SECRET=YOUR_LONG_RANDOM_SECRET
+NVIDIA_API_KEY=YOUR_NVIDIA_API_KEY
 ```
 
-## Expected n8n response
+Optional:
 
-Return either:
+```text
+MODEL_ALL=meta/llama-3.3-70b-instruct
+```
+
+Remove or ignore these old variables:
+
+```text
+N8N_WEBHOOK_URL
+N8N_WEBHOOK_SECRET
+```
+
+They are not used by v24.
+
+## Deploy on Render
+
+1. Extract this ZIP.
+2. Upload the files to your GitHub repository.
+3. Commit and push.
+4. Open Render.
+5. Open your existing Web Service.
+6. Confirm `NVIDIA_API_KEY` exists under Environment.
+7. Trigger **Manual Deploy → Deploy latest commit**.
+
+Start command:
+
+```text
+npm start
+```
+
+## Website output
+
+The API response is:
 
 ```json
 {
   "ok": true,
-  "output": "complete generated script",
-  "fullVoiceover": "voiceover text",
-  "audioBase64": "BASE64_MP3",
-  "audioMimeType": "audio/mpeg"
+  "voiceover": "[confident] ...",
+  "model": "meta/llama-3.3-70b-instruct",
+  "mode": "voiceover-only"
 }
 ```
 
-or:
-
-```json
-{
-  "ok": true,
-  "output": "complete generated script",
-  "fullVoiceover": "voiceover text",
-  "audioUrl": "https://storage.example/voiceover.mp3"
-}
-```
-
-## Update
-
-Replace the old `package.json` and `server.js`, then deploy the latest commit on Render.
+The browser displays only `voiceover`.

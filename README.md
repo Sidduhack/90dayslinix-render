@@ -1,13 +1,39 @@
-# Linux Render v24 — Voiceover Only
+# Linux Render v27 — Thirteen Sections
 
-This version removes:
+This version restores the complete thirteen-section output while keeping the updated voiceover style.
 
-- n8n
-- ElevenLabs automation
-- Base64 MP3 responses
-- captions, timelines, quizzes, and long multi-section output
+## Thirteen sections
 
-It generates only one continuous, paste-ready Telugu Linux voiceover script.
+1. Video Title
+2. Three Hook Options
+3. Full Voiceover Script
+4. Screen-Recording Timeline
+5. Requirements
+6. Termux Install Commands
+7. Ubuntu/Debian Install Commands
+8. Main Command Examples
+9. Different Ways to Use the Command
+10. Practice Task
+11. Instagram Caption
+12. Hashtags
+13. Safety Note
+
+## Updated voiceover rules
+
+- Natural spoken Telugu mixed with familiar English tech words
+- No Roman Telugu
+- No formal words such as:
+  - సరళం
+  - ధృవీకరించండి
+  - సృష్టించి
+  - అభినందనలు
+  - పరిశీలించండి
+  - విధానం
+- No separate error-handling or troubleshooting section
+- Explains multiple practical ways to use the command
+- Includes safe command examples
+- Uses ElevenLabs expression tags
+- Ends with a motivational follow CTA
 
 ## Required Render environment variable
 
@@ -15,30 +41,20 @@ It generates only one continuous, paste-ready Telugu Linux voiceover script.
 NVIDIA_API_KEY=YOUR_NVIDIA_API_KEY
 ```
 
-Optional:
+Optional model variable:
 
 ```text
 MODEL_ALL=meta/llama-3.3-70b-instruct
 ```
 
-Remove or ignore these old variables:
-
-```text
-N8N_WEBHOOK_URL
-N8N_WEBHOOK_SECRET
-```
-
-They are not used by v24.
-
-## Deploy on Render
+## Deploy
 
 1. Extract this ZIP.
-2. Upload the files to your GitHub repository.
+2. Replace the files in your GitHub repository.
 3. Commit and push.
-4. Open Render.
-5. Open your existing Web Service.
-6. Confirm `NVIDIA_API_KEY` exists under Environment.
-7. Trigger **Manual Deploy → Deploy latest commit**.
+4. Open your Render Web Service.
+5. Confirm `NVIDIA_API_KEY` is present.
+6. Select **Manual Deploy → Deploy latest commit**.
 
 Start command:
 
@@ -46,17 +62,4 @@ Start command:
 npm start
 ```
 
-## Website output
-
-The API response is:
-
-```json
-{
-  "ok": true,
-  "voiceover": "[confident] ...",
-  "model": "meta/llama-3.3-70b-instruct",
-  "mode": "voiceover-only"
-}
-```
-
-The browser displays only `voiceover`.
+n8n and ElevenLabs automation variables are not used.

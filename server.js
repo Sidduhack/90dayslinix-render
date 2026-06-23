@@ -6,13 +6,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "2mb" }));
 
-const commands = [
+const commandSuggestions = [
   "pwd", "ls", "cd", "mkdir", "touch", "cat", "cp", "mv", "rm",
-  "chmod", "chown", "git", "curl", "wget", "grep", "find", "ps",
-  "top", "kill", "df", "du", "free", "uname", "tar", "zip/unzip",
-  "bash script"
+  "chmod", "grep", "find", "ps", "top", "kill", "df", "du",
+  "free", "uname", "curl", "wget", "tar", "zip", "bash"
 ];
 
 function getModel() {
@@ -21,7 +20,7 @@ function getModel() {
     "meta/llama-3.3-70b-instruct";
 }
 
-function makeTeluguNatural(script) {
+function makeVoiceoverNatural(script) {
   const replacements = [
     [/సరళంగా/g, "simple గా"],
     [/సరళమైన/g, "simple"],
@@ -80,12 +79,11 @@ function makeTeluguNatural(script) {
     [/అభినందనలు/g, "చాలా బాగుంది"],
     [/శుభాకాంక్షలు/g, "all the best"],
     [/విజయవంతంగా/g, "successfully"],
-    [/పూర్తిచేశారు/g, "complete చేశారు"],
-    [/పూర్తి చేశారు/g, "complete చేశారు"],
-    [/ప్రయత్నించండి/g, "try చేయండి"],
+
     [/పరిశీలించండి/g, "check చేయండి"],
+    [/ప్రయత్నించండి/g, "try చేయండి"],
     [/గమనించండి/g, "observe చేయండి"],
-    [/ఉపయోగకరంగా/g, "useful గా"],
+
     [/విధానాలు/g, "ways"],
     [/విధానం/g, "way"],
     [/ఉదాహరణలు/g, "examples"],
@@ -104,38 +102,66 @@ function makeTeluguNatural(script) {
     .trim();
 }
 
-function extractVoiceover(text) {
-  const content = String(text || "").trim();
-
-  const tagged = content.match(
-    /<voiceover>\s*([\s\S]*?)\s*<\/voiceover>/i
-  );
-
-  let script = tagged ? tagged[1].trim() : content;
-
-  script = script
-    .replace(/^```(?:text|markdown)?\s*/i, "")
+function stripFences(text) {
+  return String(text || "")
+    .replace(/^```(?:text|markdown|json)?\s*/i, "")
     .replace(/\s*```$/i, "")
-    .replace(/^["']|["']$/g, "")
     .trim();
-
-  return makeTeluguNatural(script);
 }
 
-function tokenLimitForLength(length) {
-  switch (length) {
-    case "35 seconds":
-      return 700;
-    case "45 seconds":
-      return 900;
-    case "90 seconds":
-      return 1500;
-    default:
-      return 1200;
+function getTag(content, name, fallback = "") {
+  const match = String(content || "").match(
+    new RegExp(`<${name}>\\s*([\\s\\S]*?)\\s*</${name}>`, "i")
+  );
+  return match ? stripFences(match[1]) : fallback;
+}
+
+function parseThirteenSections(raw) {
+  const content = stripFences(raw);
+
+  return {
+    videoTitle: getTag(content, "video_title"),
+    hooks: getTag(content, "hooks"),
+    voiceover: makeVoiceoverNatural(getTag(content, "voiceover")),
+    screenTimeline: getTag(content, "screen_timeline"),
+    requirements: getTag(content, "requirements"),
+    termuxInstall: getTag(content, "termux_install"),
+    ubuntuInstall: getTag(content, "ubuntu_install"),
+    mainExamples: getTag(content, "main_examples"),
+    useCases: getTag(content, "use_cases"),
+    practiceTask: getTag(content, "practice_task"),
+    instagramCaption: getTag(content, "instagram_caption"),
+    hashtags: getTag(content, "hashtags"),
+    safetyNote: getTag(content, "safety_note")
+  };
+}
+
+function validateSections(sections) {
+  const missing = Object.entries(sections)
+    .filter(([, value]) => !String(value || "").trim())
+    .map(([key]) => key);
+
+  if (missing.length) {
+    throw new Error(
+      "AI response missed required sections: " + missing.join(", ")
+    );
   }
 }
 
-async function generateVoiceover(prompt, maxTokens) {
+function maxTokensForLength(length) {
+  switch (length) {
+    case "35 seconds":
+      return 2300;
+    case "45 seconds":
+      return 2700;
+    case "90 seconds":
+      return 4200;
+    default:
+      return 3400;
+  }
+}
+
+async function callNvidia(prompt, maxTokens) {
   const apiKey = process.env.NVIDIA_API_KEY;
 
   if (!apiKey) {
@@ -159,25 +185,24 @@ async function generateVoiceover(prompt, maxTokens) {
           {
             role: "system",
             content:
-              "You write accurate Linux voiceovers in everyday spoken Telugu mixed " +
-              "with familiar English tech words. Never use formal Telugu words " +
-              "such as సరళం, ధృవీకరించండి, సృష్టించి, అమలు చేయండి, " +
+              "You create accurate thirteen-section Linux learning content. " +
+              "The voiceover must use everyday spoken Telugu mixed with " +
+              "familiar English tech words. Avoid formal Telugu words such as " +
+              "సరళం, ధృవీకరించండి, సృష్టించి, అమలు చేయండి, " +
               "నిర్ధారించండి, ఆదేశం, దోషం, ఫలితం, మార్గం, " +
-              "అభినందనలు, శుభాకాంక్షలు, పరిశీలించండి, or విధానం. " +
-              "Use simple, check చేయండి, create చేసి, run చేయండి, command, " +
-              "output, path, way, examples, observe చేయండి, and try చేయండి. " +
-              "Do not add troubleshooting or error handling. Explain multiple " +
-              "practical ways to use the command with safe examples. Return only " +
-              "the requested <voiceover> tag. No JSON, headings, analysis, notes, " +
-              "or Markdown fences."
+              "అభినందనలు, శుభాకాంక్షలు, పరిశీలించండి, విధానం. " +
+              "Do not include a troubleshooting or error-handling section. " +
+              "Explain multiple practical ways to use the command. " +
+              "Return only the exact XML-style tags requested by the user. " +
+              "No JSON, analysis, notes, or Markdown fences."
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.32,
-        top_p: 0.8,
+        temperature: 0.28,
+        top_p: 0.78,
         max_tokens: maxTokens,
         stream: false
       })
@@ -206,122 +231,137 @@ const html = `<!DOCTYPE html>
 <html lang="te">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Linux Telugu Voiceover Generator</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Linux 13-Section Content Generator</title>
 <style>
 :root{
   color-scheme:dark;
   --bg:#060a11;
-  --panel:#0f1827;
-  --panel2:#070c14;
-  --border:#283950;
-  --text:#f4f7ff;
-  --muted:#9eacc2;
-  --blue:#46adff;
-  --violet:#8569ff;
-  --green:#63ecad;
+  --panel:#101827;
+  --panel2:#080e18;
+  --border:#2b3a52;
+  --text:#f5f8ff;
+  --muted:#9cabc1;
+  --blue:#48b0ff;
+  --violet:#866cff;
+  --green:#61e9aa;
 }
 *{box-sizing:border-box}
 body{
   margin:0;
   background:
-    radial-gradient(circle at 15% 0%,rgba(70,173,255,.12),transparent 30%),
-    radial-gradient(circle at 90% 10%,rgba(133,105,255,.10),transparent 28%),
+    radial-gradient(circle at 10% 0%,rgba(72,176,255,.12),transparent 28%),
+    radial-gradient(circle at 90% 8%,rgba(134,108,255,.10),transparent 28%),
     var(--bg);
   color:var(--text);
   font-family:Arial,"Noto Sans Telugu",sans-serif;
 }
-main{width:min(1120px,94%);margin:auto;padding:28px 0 55px}
+main{width:min(1220px,94%);margin:auto;padding:28px 0 60px}
 .hero{text-align:center;margin-bottom:22px}
 .badge{
-  display:inline-block;padding:8px 13px;border-radius:999px;
-  border:1px solid #315174;background:#10243b;color:#a9d8ff;
+  display:inline-block;padding:8px 14px;border-radius:999px;
+  border:1px solid #31516f;background:#10243a;color:#b2dcff;
   font-weight:800;font-size:14px
 }
 h1{font-size:clamp(30px,7vw,52px);margin:14px 0 8px}
-.sub{max-width:820px;margin:auto;color:var(--muted);line-height:1.65}
-.grid{display:grid;grid-template-columns:1fr;gap:18px}
-@media(min-width:900px){
-  .grid{grid-template-columns:390px 1fr;align-items:start}
+.sub{max-width:900px;margin:auto;color:var(--muted);line-height:1.65}
+.layout{display:grid;grid-template-columns:1fr;gap:18px}
+@media(min-width:960px){
+  .layout{grid-template-columns:390px 1fr;align-items:start}
+  .controls{position:sticky;top:16px}
 }
-.card,.output{
-  background:rgba(15,24,39,.96);
+.card,.section{
+  background:rgba(16,24,39,.96);
   border:1px solid var(--border);
-  border-radius:20px;
-  padding:19px;
-  box-shadow:0 20px 55px rgba(0,0,0,.36)
+  border-radius:19px;
+  box-shadow:0 18px 50px rgba(0,0,0,.30)
 }
-label{display:block;margin:14px 0 7px;font-weight:800;color:#dbe6f8}
+.controls{padding:19px}
+label{display:block;margin:14px 0 7px;font-weight:800;color:#dce7f8}
 input,select,textarea{
   width:100%;padding:13px 14px;border-radius:12px;
-  border:1px solid #354a65;background:#0a1220;color:#fff;
-  font-size:15px;font-family:inherit;outline:none
+  border:1px solid #344b68;background:#0a1220;color:#fff;
+  font:inherit;outline:none
 }
-input:focus,select:focus,textarea:focus{border-color:var(--blue)}
 textarea{min-height:105px;resize:vertical}
-.pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+.pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
 .pill{
-  padding:8px 11px;border-radius:999px;border:1px solid #31455f;
-  background:#101c2e;color:#dceaff;cursor:pointer;font-size:13px
+  padding:7px 10px;border-radius:999px;border:1px solid #33475f;
+  background:#111e30;color:#dceaff;cursor:pointer;font-size:13px
 }
-.pill:hover{border-color:var(--blue)}
 button{
   border:0;border-radius:12px;padding:13px 16px;
-  font-size:15px;font-weight:900;cursor:pointer
+  font-weight:900;font-size:15px;cursor:pointer
 }
 .primary{
-  width:100%;margin-top:17px;
-  background:linear-gradient(135deg,var(--blue),var(--violet));
-  color:#04101c
+  width:100%;margin-top:17px;color:#04101b;
+  background:linear-gradient(135deg,var(--blue),var(--violet))
 }
-.secondary{background:#18253a;color:#e4efff;border:1px solid #354963}
+.secondary{
+  background:#18263b;color:#e7f0ff;border:1px solid #354b66
+}
 .primary:disabled{opacity:.6;cursor:not-allowed}
 .status{
-  margin-top:13px;padding:12px;border:1px solid #33465f;
-  border-radius:12px;background:#0a1220;color:#dce8fa;
-  font-size:14px;line-height:1.5
+  margin-top:12px;padding:12px;border-radius:12px;
+  background:#0a1220;border:1px solid #33465e;
+  color:#dbe8fa;line-height:1.5;font-size:14px
 }
 .note{
-  margin-top:13px;padding:12px;border-left:4px solid var(--green);
-  border-radius:12px;background:rgba(99,236,173,.08);
-  color:#d5ffeb;line-height:1.55;font-size:14px
+  margin-top:12px;padding:12px;border-radius:12px;
+  border-left:4px solid var(--green);
+  background:rgba(97,233,170,.08);color:#d8ffed;
+  line-height:1.55;font-size:14px
 }
-.outputHead{
-  display:flex;align-items:center;justify-content:space-between;
-  gap:12px;margin-bottom:12px
+.outputToolbar{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:10px;margin-bottom:12px
 }
-.outputHead h2{margin:0}
-pre{
-  min-height:620px;margin:0;padding:18px;border-radius:15px;
-  border:1px solid #213149;background:var(--panel2);
-  white-space:pre-wrap;word-wrap:break-word;overflow-x:auto;
-  color:#edf4ff;font-size:16px;line-height:1.85;
-  font-family:Arial,"Noto Sans Telugu",sans-serif
+.outputToolbar h2{margin:0}
+.outputList{display:grid;gap:14px}
+.section{padding:17px}
+.sectionHead{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:12px;margin-bottom:10px
 }
+.section h3{margin:0;font-size:18px}
+.num{
+  display:inline-grid;place-items:center;width:29px;height:29px;
+  margin-right:8px;border-radius:9px;
+  background:#172c45;color:#9fd6ff;font-size:14px
+}
+.section pre{
+  margin:0;padding:15px;border-radius:13px;
+  border:1px solid #26364d;background:var(--panel2);
+  white-space:pre-wrap;word-break:break-word;
+  color:#edf5ff;font:15.5px/1.75 Arial,"Noto Sans Telugu",sans-serif;
+  min-height:72px
+}
+.voice pre{font-size:16.5px;line-height:1.9}
+.copySmall{padding:8px 11px;font-size:13px}
 .small{color:var(--muted);font-size:13px;line-height:1.5}
-code{color:#a9d8ff}
+code{color:#a9d9ff}
 </style>
 </head>
 <body>
 <main>
   <section class="hero">
-    <span class="badge">Linux Challenge • Voiceover Only</span>
-    <h1>Telugu Linux Voiceover Generator</h1>
+    <span class="badge">90 Days Linux Basics Challenge</span>
+    <h1>13-Section Content Generator</h1>
     <p class="sub">
-      Generates only one continuous, paste-ready ElevenLabs voiceover:
-      native Telugu script, natural English tech words, realistic command
-      explanation, multiple use cases, practice task, and motivational CTA.
+      Complete Reel plan with the updated natural Telugu voiceover:
+      no formal Telugu, no separate error section, and multiple practical
+      ways to use each Linux command.
     </p>
   </section>
 
-  <section class="grid">
-    <section class="card">
+  <section class="layout">
+    <aside class="card controls">
       <label for="day">Day number</label>
       <input id="day" value="1"/>
 
       <label for="command">Linux command or topic</label>
       <input id="command" value="pwd" placeholder="pwd, ls, cd, mkdir..."/>
-
       <div class="pills" id="pills"></div>
 
       <label for="environment">Environment</label>
@@ -349,10 +389,10 @@ code{color:#a9d8ff}
 
       <label for="extra">Extra instruction</label>
       <textarea id="extra"
-        placeholder="Example: Explain the output more deeply, but keep the script simple."></textarea>
+        placeholder="Example: Explain more real-life uses, but keep the voiceover natural."></textarea>
 
       <button class="primary" id="generateBtn" type="button">
-        Generate Voiceover Script
+        Generate All 13 Sections
       </button>
 
       <button class="secondary" id="testBtn" type="button"
@@ -363,58 +403,115 @@ code{color:#a9d8ff}
       <div class="status" id="status">Status: Ready.</div>
 
       <div class="note">
-        Output contains only the voiceover script—no captions, timeline,
-        JSON, audio, or n8n workflow.
+        Voiceover uses spoken Telugu with English tech words.
+        The old error/fix section is replaced by “Different Ways to Use.”
       </div>
 
       <p class="small">
-        Render variable required: <code>NVIDIA_API_KEY</code>.
-        Optional: <code>MODEL_ALL=meta/llama-3.3-70b-instruct</code>.
+        Required Render variable: <code>NVIDIA_API_KEY</code>
       </p>
-    </section>
+    </aside>
 
-    <section class="output">
-      <div class="outputHead">
-        <h2>Paste-Ready Voiceover</h2>
-        <button class="secondary" id="copyBtn" type="button">Copy</button>
+    <section>
+      <div class="outputToolbar">
+        <h2>Generated Content</h2>
+        <button class="secondary" id="copyAllBtn" type="button">Copy All</button>
       </div>
-      <pre id="output">Select a command and click Generate Voiceover Script.</pre>
+      <div class="outputList" id="outputList"></div>
     </section>
   </section>
 </main>
 
 <script>
 (() => {
-  const commands = ${JSON.stringify(commands)};
-  const byId = id => document.getElementById(id);
-  const output = byId("output");
-  const status = byId("status");
-  const generateBtn = byId("generateBtn");
+  const suggestions = ${JSON.stringify(commandSuggestions)};
+  const sectionConfig = [
+    ["videoTitle", "Video Title"],
+    ["hooks", "Three Hook Options"],
+    ["voiceover", "Full Voiceover Script"],
+    ["screenTimeline", "Screen-Recording Timeline"],
+    ["requirements", "Requirements"],
+    ["termuxInstall", "Termux Install Commands"],
+    ["ubuntuInstall", "Ubuntu/Debian Install Commands"],
+    ["mainExamples", "Main Command Examples"],
+    ["useCases", "Different Ways to Use the Command"],
+    ["practiceTask", "Practice Task"],
+    ["instagramCaption", "Instagram Caption"],
+    ["hashtags", "Hashtags"],
+    ["safetyNote", "Safety Note"]
+  ];
 
-  function setStatus(text) {
-    status.textContent = "Status: " + text;
+  const byId = id => document.getElementById(id);
+  const outputList = byId("outputList");
+  const generateBtn = byId("generateBtn");
+  const status = byId("status");
+  let latestData = {};
+
+  function setStatus(message) {
+    status.textContent = "Status: " + message;
   }
 
-  commands.forEach(command => {
-    const item = document.createElement("button");
-    item.type = "button";
-    item.className = "pill";
-    item.textContent = command;
-    item.addEventListener("click", () => {
+  function renderSections(data = {}) {
+    outputList.innerHTML = "";
+
+    sectionConfig.forEach(([key, title], index) => {
+      const wrapper = document.createElement("article");
+      wrapper.className = "section" + (key === "voiceover" ? " voice" : "");
+
+      const head = document.createElement("div");
+      head.className = "sectionHead";
+
+      const heading = document.createElement("h3");
+      heading.innerHTML =
+        '<span class="num">' + (index + 1) + "</span>" + title;
+
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "secondary copySmall";
+      copy.textContent = "Copy";
+      copy.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(data[key] || "");
+        copy.textContent = "Copied";
+        setTimeout(() => copy.textContent = "Copy", 1000);
+      });
+
+      const pre = document.createElement("pre");
+      pre.textContent = data[key] || "Waiting for generation...";
+
+      head.appendChild(heading);
+      head.appendChild(copy);
+      wrapper.appendChild(head);
+      wrapper.appendChild(pre);
+      outputList.appendChild(wrapper);
+    });
+  }
+
+  suggestions.forEach(command => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "pill";
+    button.textContent = command;
+    button.addEventListener("click", () => {
       byId("command").value = command;
     });
-    byId("pills").appendChild(item);
+    byId("pills").appendChild(button);
   });
 
+  renderSections();
+
   byId("testBtn").addEventListener("click", async () => {
-    setStatus("Testing server and NVIDIA configuration...");
+    setStatus("Testing API configuration...");
     try {
       const response = await fetch("/api/test");
       const data = await response.json();
-      output.textContent = JSON.stringify(data, null, 2);
+      latestData = {
+        videoTitle: JSON.stringify(data, null, 2)
+      };
+      renderSections(latestData);
       setStatus(response.ok ? "Connection test completed." : "Connection test failed.");
     } catch (error) {
-      output.textContent = "Connection test failed:\\n" + error.message;
+      latestData = {videoTitle: "Test failed:\\n" + error.message};
+      renderSections(latestData);
       setStatus("Connection test failed.");
     }
   });
@@ -430,20 +527,27 @@ code{color:#a9d8ff}
     };
 
     if (!payload.day || !payload.command) {
-      output.textContent = "Enter the day number and Linux command.";
-      setStatus("Required fields are missing.");
+      setStatus("Enter day number and command.");
       return;
     }
 
     generateBtn.disabled = true;
-    output.textContent =
-      "Writing a natural Telugu voiceover...\\n\\n" +
-      "Checking command requirements...\\n" +
-      "Explaining the command and output...\\n" +
-      "Adding a realistic confusion or error fix...\\n" +
-      "Finishing with practice and CTA...";
-
-    setStatus("Generating voiceover...");
+    setStatus("Generating thirteen sections...");
+    renderSections({
+      videoTitle: "Generating...",
+      hooks: "Writing three hooks...",
+      voiceover: "Writing the natural Telugu voiceover...",
+      screenTimeline: "Planning the recording...",
+      requirements: "Checking requirements...",
+      termuxInstall: "Checking Termux installation...",
+      ubuntuInstall: "Checking Ubuntu/Debian installation...",
+      mainExamples: "Building safe examples...",
+      useCases: "Adding multiple practical ways...",
+      practiceTask: "Creating a practice task...",
+      instagramCaption: "Writing the caption...",
+      hashtags: "Selecting hashtags...",
+      safetyNote: "Adding a safety note..."
+    });
 
     try {
       const response = await fetch("/api/generate", {
@@ -455,34 +559,42 @@ code{color:#a9d8ff}
       const data = await response.json();
 
       if (!response.ok) {
-        output.textContent =
-          "Error:\\n" + (data.error || "Generation failed.") +
-          "\\n\\nDetails:\\n" + (data.details || "");
+        renderSections({
+          videoTitle:
+            "Generation failed:\\n" +
+            (data.error || "") +
+            "\\n\\n" +
+            (data.details || "")
+        });
         setStatus("Generation failed.");
         return;
       }
 
-      output.textContent = data.voiceover || "No voiceover returned.";
-      setStatus("Voiceover generated successfully.");
+      latestData = data.sections;
+      renderSections(latestData);
+      setStatus("All thirteen sections generated.");
     } catch (error) {
-      output.textContent = "Browser request failed:\\n" + error.message;
+      renderSections({
+        videoTitle: "Browser request failed:\\n" + error.message
+      });
       setStatus("Browser request failed.");
     } finally {
       generateBtn.disabled = false;
     }
   });
 
-  byId("copyBtn").addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(output.textContent);
-      byId("copyBtn").textContent = "Copied";
-      setStatus("Voiceover copied.");
-      setTimeout(() => {
-        byId("copyBtn").textContent = "Copy";
-      }, 1200);
-    } catch (error) {
-      setStatus("Copy failed: " + error.message);
-    }
+  byId("copyAllBtn").addEventListener("click", async () => {
+    const text = sectionConfig.map(([key, title], index) => {
+      return (index + 1) + ". " + title.toUpperCase() +
+        "\\n" + (latestData[key] || "");
+    }).join("\\n\\n");
+
+    await navigator.clipboard.writeText(text);
+    byId("copyAllBtn").textContent = "Copied";
+    setStatus("All thirteen sections copied.");
+    setTimeout(() => {
+      byId("copyAllBtn").textContent = "Copy All";
+    }, 1200);
   });
 })();
 </script>
@@ -496,8 +608,8 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
-    app: "Linux Telugu Voiceover Generator",
-    version: "26.0.0"
+    app: "Linux 13-Section Content Generator",
+    version: "27.0.0"
   });
 });
 
@@ -507,7 +619,7 @@ app.get("/api/test", (req, res) => {
     server: "working",
     hasNvidiaKey: Boolean(process.env.NVIDIA_API_KEY),
     model: getModel(),
-    mode: "voiceover-only"
+    format: "13-sections"
   });
 });
 
@@ -529,28 +641,85 @@ app.post("/api/generate", async (req, res) => {
     }
 
     const prompt = `
-Write one complete Linux voiceover script.
+Create a complete thirteen-section Linux learning and Instagram Reel plan.
 
 INPUT
 Day: ${day}
 Command/topic: ${command}
 Environment: ${environment || "Termux on Android"}
-Target duration: ${length || "60 seconds"}
-Delivery style: ${delivery || "Confident and friendly Telugu tech guide"}
+Target voiceover duration: ${length || "60 seconds"}
+Voice delivery: ${delivery || "Confident and friendly Telugu tech guide"}
 Extra instruction: ${extra || "None"}
 
-RETURN FORMAT
-Return exactly this tag and nothing else:
+RETURN EXACTLY THESE TAGS AND NOTHING ELSE
+
+<video_title>
+...
+</video_title>
+
+<hooks>
+...
+</hooks>
 
 <voiceover>
-SCRIPT
+...
 </voiceover>
 
-STRICT OUTPUT RULES
-- Return only one continuous, paste-ready voiceover.
-- Do not add a title, heading, section name, bullet list, caption, hashtags,
-  timeline, explanation outside the script, JSON, or Markdown fence.
-- Write in native Telugu script with natural English technical words.
+<screen_timeline>
+...
+</screen_timeline>
+
+<requirements>
+...
+</requirements>
+
+<termux_install>
+...
+</termux_install>
+
+<ubuntu_install>
+...
+</ubuntu_install>
+
+<main_examples>
+...
+</main_examples>
+
+<use_cases>
+...
+</use_cases>
+
+<practice_task>
+...
+</practice_task>
+
+<instagram_caption>
+...
+</instagram_caption>
+
+<hashtags>
+...
+</hashtags>
+
+<safety_note>
+...
+</safety_note>
+
+SECTION RULES
+
+1. VIDEO TITLE
+- Give one clear, clickable English title.
+- Mention the command and beginner value.
+- Do not use exaggerated clickbait.
+
+2. THREE HOOK OPTIONS
+- Give exactly three short English hook options.
+- Each hook must work in the first three seconds.
+- Keep each hook on a separate line.
+
+3. FULL VOICEOVER SCRIPT
+- Write one continuous, paste-ready ElevenLabs voiceover.
+- Use native Telugu script mixed with familiar English tech words.
 - Do not use Roman Telugu.
 - Do not use formal textbook Telugu.
 - Never use words such as:
@@ -562,113 +731,136 @@ STRICT OUTPUT RULES
   అభినందనలు, శుభాకాంక్షలు, విజయవంతంగా,
   పరిశీలించండి, ప్రయత్నించండి, గమనించండి,
   విధానం, విధానాలు, ఉదాహరణ, ఉదాహరణలు.
-- Use natural spoken alternatives:
-  simple, check చేయండి, check చేసి,
-  create చేయండి, create చేసి,
-  run చేయండి, use చేయండి,
-  command, output, path, directory,
-  file, permission, system,
-  way, ways, example, examples,
-  observe చేయండి, try చేయండి, successfully.
-- Prefer natural lines like:
-  “ముందుగా Termux open చేయండి.”
-  “ఇప్పుడు ఇలా type చేయండి.”
-  “Enter press చేయండి.”
-  “Output లో path కనిపిస్తుంది.”
-  “Spelling check చేసి మళ్లీ run చేయండి.”
-- Keep Linux commands, flags, paths, package names, and error messages
-  exactly in English.
-- Put important commands on their own line inside backticks.
-- Use natural expression tags in square brackets:
+- Prefer natural expressions such as:
+  simple, check చేయండి, create చేసి, run చేయండి,
+  type చేయండి, Enter press చేయండి, command,
+  output, path, directory, file, permission,
+  way, ways, example, examples, observe చేయండి,
+  try చేయండి.
+- Keep commands, package names, flags, paths, and output exactly in English.
+- Put important commands on their own line in backticks.
+- Use useful expression tags:
   [confident], [curious], [short pause], [pause],
   [satisfying tone], [motivational].
-- Use only useful tags and do not place a tag on every sentence.
-- Do not describe obvious visuals with lines such as
-  “Screen మీద మీరు ...” unless essential.
-- Do not repeat the same sentence or idea.
-- Write spoken numbers as words, except digits inside real commands,
-  versions, paths, or error messages.
-- The target duration must control the amount of detail.
+- Do not place a tag on every sentence.
+- Do not say “Screen మీద మీరు...” unless it is essential.
+- Write spoken numbers as words except digits inside commands,
+  paths, flags, versions, or real output.
 - Do not mention a specific next-day number in the CTA.
+- Do not add an error, mistake, troubleshooting, or fix section.
 
-REQUIRED TEACHING FLOW
-1. Start with an interesting, confident beginner-friendly hook.
-2. Explain why the command is useful.
-3. Ask the viewer to open ${environment || "Termux"} naturally.
-4. State accurately whether the command requires a package.
-5. Install something only when genuinely required.
-6. Tell the viewer exactly what to type.
-7. Explain the command's full form or meaning when one exists.
-8. Explain the output in simple Telugu.
-9. Explain multiple practical ways to use the command.
-10. Give at least three safe command examples when the command supports them.
-11. Explain what changes in each example and when that example is useful.
-12. Mention one real-life situation where a beginner may use the command.
-13. Give one small immediate practice task.
-14. Finish with a short motivational follow CTA.
+VOICEOVER FLOW
+- Start with a confident beginner-friendly hook.
+- Explain why the command is useful.
+- Ask the viewer to open ${environment || "Termux"} naturally.
+- State accurately whether any package is needed.
+- Install something only when it is genuinely required.
+- Tell the viewer exactly what to type.
+- Explain the command meaning or full form when one exists.
+- Explain the output in simple spoken Telugu.
+- Explain multiple practical ways to use the command.
+- For a sixty-second voiceover, normally include three practical ways.
+- Explain when each way is useful.
+- Give one small practice task.
+- Finish with a short motivational follow CTA.
 
-MULTIPLE-USE RULES
-- Do not add a separate error, mistake, troubleshooting, or fix section.
-- Focus on how many useful ways the command can be used.
-- For simple commands, give different paths, folders, files, flags, or
-  combinations only when they are technically correct.
-- When a command has only one common form, explain related practical
-  situations instead of inventing fake options.
-- Keep every example short enough to fit the target duration.
-- For sixty seconds, normally give three practical examples.
-- For ninety seconds, normally give four or five practical examples.
-- For thirty-five or forty-five seconds, give two or three examples.
+4. SCREEN-RECORDING TIMELINE
+Create a practical Reel timeline:
+- zero to two seconds: title
+- two to five seconds: hook
+- five to fifteen seconds: open Termux and main command
+- fifteen to twenty-two seconds: command meaning and output
+- twenty-two to twenty-eight seconds: different ways/examples
+- twenty-eight seconds onward: practice and CTA
+Adjust timings to the selected duration.
+State exactly what should be recorded.
+
+5. REQUIREMENTS
+- List only genuine requirements.
+- State clearly when no extra package is needed.
+- Include device/app requirements when relevant.
+
+6. TERMUX INSTALL COMMANDS
+- Give exact Termux commands only when installation is required.
+- If nothing is required, write:
+  No extra package required.
+- Never invent a package.
+
+7. UBUNTU/DEBIAN INSTALL COMMANDS
+- Give exact Ubuntu/Debian commands only when required.
+- If nothing is required, write:
+  No extra package required.
+- Do not use sudo unnecessarily.
+
+8. MAIN COMMAND EXAMPLES
+- Give safe, copyable commands.
+- Include the basic command first.
+- Add useful flags or arguments only when technically correct.
+- Keep each command on a separate line.
+- Do not use destructive real paths.
+
+9. DIFFERENT WAYS TO USE THE COMMAND
+- Replace the old errors/fixes section with this section.
+- Explain multiple practical ways to use the command.
+- Normally give at least three ways.
+- Explain what each way changes and when it is useful.
+- When the command has only one common form, explain different real-life
+  situations instead of inventing fake flags.
+- Keep the explanations beginner-friendly.
+
+10. PRACTICE TASK
+- Give one small task the viewer can complete immediately.
+- Use safe folders and files.
+- The task must use the command learned today.
+
+11. INSTAGRAM CAPTION
+- Write a natural Instagram caption.
+- Mention the command and learning benefit.
+- Add a short follow CTA.
+- Do not repeat the entire voiceover.
+
+12. HASHTAGS
+- Give twelve to eighteen relevant hashtags.
+- Mix broad and niche Linux, Termux, coding, and learning hashtags.
+- Do not add unrelated trending hashtags.
+
+13. SAFETY NOTE
+- Give a short, command-specific safety note.
+- For harmless commands, explain that they are read-only or safe.
+- For commands that modify/delete data, warn clearly and use a demo folder.
+- Never recommend chmod 777 blindly.
+- Never suggest root or sudo unless truly necessary.
 
 TECHNICAL ACCURACY
-- Never invent an installation package.
-- Never invent flags or command combinations.
-- Never recommend chmod 777 blindly.
-- Never suggest root or sudo unless it is truly necessary.
-- For destructive commands, use a clearly named safe demo directory.
-- For shell built-ins and standard commands, do not falsely say that a
-  package installation is required.
-
-STYLE REFERENCE
-The finished voiceover should feel like this pattern:
-
-[confident] Linux నేర్చుకునేటప్పుడు... మనం ఇప్పుడు ఏ folder లో ఉన్నామో
-తెలుసుకోవాలి. [short pause]
-
-అందుకోసం ఉపయోగించే command — \`pwd\`. [pause]
-
-ముందుగా Termux open చేయండి.
-ఈ command కోసం ఎలాంటి package install చేయాల్సిన అవసరం లేదు.
-
-Then continue naturally with the exact command, output explanation,
-multiple practical ways to use it, safe examples, practice, and CTA.
-Do not add an error-handling or troubleshooting section.
+- Never invent flags, package names, output, or command behavior.
+- For shell built-ins and standard commands, do not falsely claim
+  installation is needed.
+- For risky commands, use a clearly named safe demo directory.
+- Keep all commands syntactically valid for the selected environment.
 `;
 
-    const raw = await generateVoiceover(
+    const raw = await callNvidia(
       prompt,
-      tokenLimitForLength(length)
+      maxTokensForLength(length)
     );
 
-    const voiceover = extractVoiceover(raw);
-
-    if (!voiceover) {
-      throw new Error("The model returned an empty voiceover.");
-    }
+    const sections = parseThirteenSections(raw);
+    validateSections(sections);
 
     res.json({
       ok: true,
-      voiceover,
+      sections,
       model: getModel(),
-      mode: "voiceover-only"
+      format: "13-sections"
     });
   } catch (error) {
     res.status(500).json({
-      error: "Voiceover generation failed.",
+      error: "Content generation failed.",
       details: error.message
     });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Multiple-use Telugu voiceover app running on port ${PORT}`);
+  console.log(`Linux 13-section app running on port ${PORT}`);
 });

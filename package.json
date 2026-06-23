@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v26-multiple-command-uses",
-  "version": "26.0.0",
-  "description": "Natural Telugu Linux voiceovers with multiple practical command uses",
+  "name": "linux-render-v27-thirteen-sections",
+  "version": "27.0.0",
+  "description": "Linux 13-section Reel generator with natural Telugu voiceover and multiple command uses",
   "main": "server.js",
   "type": "module",
   "scripts": {

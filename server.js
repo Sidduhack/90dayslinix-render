@@ -75,7 +75,21 @@ function makeTeluguNatural(script) {
     [/నొక్కండి/g, "press చేయండి"],
 
     [/కార్యనిర్వహణ/g, "run చేయడం"],
-    [/కార్యాచరణ/g, "process"]
+    [/కార్యాచరణ/g, "process"],
+
+    [/అభినందనలు/g, "చాలా బాగుంది"],
+    [/శుభాకాంక్షలు/g, "all the best"],
+    [/విజయవంతంగా/g, "successfully"],
+    [/పూర్తిచేశారు/g, "complete చేశారు"],
+    [/పూర్తి చేశారు/g, "complete చేశారు"],
+    [/ప్రయత్నించండి/g, "try చేయండి"],
+    [/పరిశీలించండి/g, "check చేయండి"],
+    [/గమనించండి/g, "observe చేయండి"],
+    [/ఉపయోగకరంగా/g, "useful గా"],
+    [/విధానాలు/g, "ways"],
+    [/విధానం/g, "way"],
+    [/ఉదాహరణలు/g, "examples"],
+    [/ఉదాహరణ/g, "example"]
   ];
 
   let result = String(script || "");
@@ -148,10 +162,14 @@ async function generateVoiceover(prompt, maxTokens) {
               "You write accurate Linux voiceovers in everyday spoken Telugu mixed " +
               "with familiar English tech words. Never use formal Telugu words " +
               "such as సరళం, ధృవీకరించండి, సృష్టించి, అమలు చేయండి, " +
-              "నిర్ధారించండి, ఆదేశం, దోషం, ఫలితం, or మార్గం. " +
+              "నిర్ధారించండి, ఆదేశం, దోషం, ఫలితం, మార్గం, " +
+              "అభినందనలు, శుభాకాంక్షలు, పరిశీలించండి, or విధానం. " +
               "Use simple, check చేయండి, create చేసి, run చేయండి, command, " +
-              "error, output, path, and fix instead. Return only the requested " +
-              "<voiceover> tag. No JSON, headings, analysis, notes, or Markdown fences."
+              "output, path, way, examples, observe చేయండి, and try చేయండి. " +
+              "Do not add troubleshooting or error handling. Explain multiple " +
+              "practical ways to use the command with safe examples. Return only " +
+              "the requested <voiceover> tag. No JSON, headings, analysis, notes, " +
+              "or Markdown fences."
           },
           {
             role: "user",
@@ -292,7 +310,7 @@ code{color:#a9d8ff}
     <p class="sub">
       Generates only one continuous, paste-ready ElevenLabs voiceover:
       native Telugu script, natural English tech words, realistic command
-      explanation, error fix, practice task, and motivational CTA.
+      explanation, multiple use cases, practice task, and motivational CTA.
     </p>
   </section>
 
@@ -479,7 +497,7 @@ app.get("/health", (req, res) => {
   res.json({
     ok: true,
     app: "Linux Telugu Voiceover Generator",
-    version: "25.0.0"
+    version: "26.0.0"
   });
 });
 
@@ -540,13 +558,18 @@ STRICT OUTPUT RULES
   సృష్టించండి, సృష్టించి, రూపొందించండి,
   అమలు చేయండి, నిర్ధారించండి, వినియోగించండి,
   ఆదేశం, దోషం, ఫలితం, మార్గం, నిర్దేశిక,
-  దస్త్రం, కార్యనిర్వహణ, కార్యాచరణ.
+  దస్త్రం, కార్యనిర్వహణ, కార్యాచరణ,
+  అభినందనలు, శుభాకాంక్షలు, విజయవంతంగా,
+  పరిశీలించండి, ప్రయత్నించండి, గమనించండి,
+  విధానం, విధానాలు, ఉదాహరణ, ఉదాహరణలు.
 - Use natural spoken alternatives:
   simple, check చేయండి, check చేసి,
   create చేయండి, create చేసి,
   run చేయండి, use చేయండి,
-  command, error, output, path, directory,
-  file, permission, system, fix.
+  command, output, path, directory,
+  file, permission, system,
+  way, ways, example, examples,
+  observe చేయండి, try చేయండి, successfully.
 - Prefer natural lines like:
   “ముందుగా Termux open చేయండి.”
   “ఇప్పుడు ఇలా type చేయండి.”
@@ -577,16 +600,28 @@ REQUIRED TEACHING FLOW
 6. Tell the viewer exactly what to type.
 7. Explain the command's full form or meaning when one exists.
 8. Explain the output in simple Telugu.
-9. Include one genuine beginner mistake, realistic error, or confusion.
-10. Explain the reason first, then provide the safe fix.
-11. Ask the viewer to run/check again and verify the result.
-12. Give one small immediate practice task.
-13. Finish with a short motivational follow CTA.
+9. Explain multiple practical ways to use the command.
+10. Give at least three safe command examples when the command supports them.
+11. Explain what changes in each example and when that example is useful.
+12. Mention one real-life situation where a beginner may use the command.
+13. Give one small immediate practice task.
+14. Finish with a short motivational follow CTA.
+
+MULTIPLE-USE RULES
+- Do not add a separate error, mistake, troubleshooting, or fix section.
+- Focus on how many useful ways the command can be used.
+- For simple commands, give different paths, folders, files, flags, or
+  combinations only when they are technically correct.
+- When a command has only one common form, explain related practical
+  situations instead of inventing fake options.
+- Keep every example short enough to fit the target duration.
+- For sixty seconds, normally give three practical examples.
+- For ninety seconds, normally give four or five practical examples.
+- For thirty-five or forty-five seconds, give two or three examples.
 
 TECHNICAL ACCURACY
 - Never invent an installation package.
-- Never invent an unrealistic error just to fill the script.
-- For a command that normally works, explain a genuine confusion instead.
+- Never invent flags or command combinations.
 - Never recommend chmod 777 blindly.
 - Never suggest root or sudo unless it is truly necessary.
 - For destructive commands, use a clearly named safe demo directory.
@@ -605,7 +640,8 @@ The finished voiceover should feel like this pattern:
 ఈ command కోసం ఎలాంటి package install చేయాల్సిన అవసరం లేదు.
 
 Then continue naturally with the exact command, output explanation,
-realistic confusion/error fix, verification, practice, and CTA.
+multiple practical ways to use it, safe examples, practice, and CTA.
+Do not add an error-handling or troubleshooting section.
 `;
 
     const raw = await generateVoiceover(
@@ -634,5 +670,5 @@ realistic confusion/error fix, verification, practice, and CTA.
 });
 
 app.listen(PORT, () => {
-  console.log(`Natural-spoken-Telugu voiceover app running on port ${PORT}`);
+  console.log(`Multiple-use Telugu voiceover app running on port ${PORT}`);
 });

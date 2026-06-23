@@ -1,7 +1,7 @@
 {
-  "name": "linux-render-v25-natural-spoken-telugu",
-  "version": "25.0.0",
-  "description": "Natural spoken Telugu Linux voiceover generator using familiar English tech words",
+  "name": "linux-render-v26-multiple-command-uses",
+  "version": "26.0.0",
+  "description": "Natural Telugu Linux voiceovers with multiple practical command uses",
   "main": "server.js",
   "type": "module",
   "scripts": {
